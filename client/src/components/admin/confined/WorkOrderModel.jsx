@@ -41,7 +41,6 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
   });
 
   const [previewImages, setPreviewImages] = useState([]);
-
   useEffect(() => {
     if (order) {
       // Ensure all boolean fields are properly initialized
@@ -61,10 +60,15 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         'contractorsEnterSpace'
       ];
 
+      // Get the current user data
+      const user = JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}');
+      const technicianName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
+
       const processedOrder = {
         ...order,
         dateOfSurvey: order.dateOfSurvey?.slice(0, 10) || "",
         surveyors: Array.isArray(order.surveyors) ? order.surveyors : [],
+        technician: technicianName, // Add the technician name
         images: order.images || []
       };
 
@@ -77,7 +81,6 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       setPreviewImages(order.images || []);
     }
   }, [order]);
-
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     
@@ -87,7 +90,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         ...prev,
         [name]: value === "true"
       }));
-    } else if (name === "surveyors") {
+    } else if (name === "surveyors" && !e.target.readOnly) {
       setFormData(prev => ({
         ...prev,
         surveyors: value.split(",").map(s => s.trim()).filter(s => s !== "")
@@ -136,7 +139,6 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       images: newImages
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -145,10 +147,14 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       // Get user from localStorage
       const user = JSON.parse(localStorage.getItem("User"));
       const userId = user?._id || user?.id;
-
+      
+      // If surveyors field is empty or not properly set, use the logged-in user's name
+      const technicianName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
+      
       const dataToSubmit = {
         ...formData,
         userId,
+        surveyors: [technicianName], // Set surveyors as an array with technician name
         dateOfSurvey: formData.dateOfSurvey ? new Date(formData.dateOfSurvey).toISOString() : new Date().toISOString(),
       };
 
@@ -256,16 +262,15 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   required 
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Surveyors (comma separated) *</label>
+              </div>              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Technician *</label>
                 <input 
                   type="text" 
                   name="surveyors" 
-                  value={formData.surveyors.join(", ")} 
-                  onChange={handleChange} 
+                  value={formData.technician || `${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').firstname} ${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').lastname}`} 
+                  readOnly
                   required 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
                 />
               </div>
               <div>

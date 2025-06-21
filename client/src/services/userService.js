@@ -260,6 +260,37 @@ const verifyAuth = async () => {
     }
 };
 
+// Get all technicians (users with 'user' role)
+const getTechnicians = async () => {
+    try {
+        const response = await api.get('/');
+        // Filter users with 'user' role only
+        return response.data.filter(user => user.userType === 'user' && user.isActive);
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+// Get technician by ID
+const getTechnicianById = async (id) => {
+    try {
+        // Add a token to ensure the request is authenticated
+        let token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        token = token?.replace(/^"|"$/g, '');
+        
+        const response = await axios.get(`http://localhost:5001/api/auth/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching technician details:', error);
+        return null; // Return null instead of throwing to avoid breaking the UI
+    }
+};
+
 // Initialize session monitoring after all functions are defined
 initSessionMonitoring();
 
@@ -271,5 +302,7 @@ export {
     getUser,
     verifyAuth,
     api as authApi,
-    SESSION_TIMEOUT_EVENT
+    SESSION_TIMEOUT_EVENT,
+    getTechnicians,
+    getTechnicianById
 };

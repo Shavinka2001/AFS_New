@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap }) => {
+const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap, onAssignTechnicians }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -35,6 +35,9 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap 
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Technicians
+            </th>
             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
             </th>
@@ -46,29 +49,39 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap 
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-gray-900">{location.name}</div>
                 <div className="text-xs text-gray-500">
-                  {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                  {location.latitude && location.longitude ? 
+                    `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` : 
+                    'No coordinates'}
                 </div>
               </td>
               <td className="px-6 py-4">
-                <div className="text-sm text-gray-900 line-clamp-2">{location.address}</div>
-                {location.description && (
-                  <div className="text-xs text-gray-500 mt-1 line-clamp-1">{location.description}</div>
-                )}
+                <div className="text-sm text-gray-900">{location.address}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  location.isActive
-                    ? 'bg-green-100 text-green-800'
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                  location.isActive 
+                    ? 'bg-green-100 text-green-800' 
                     : 'bg-red-100 text-red-800'
                 }`}>
                   {location.isActive ? 'Active' : 'Inactive'}
                 </span>
               </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-900">
+                  {location.assignedTechnicians && location.assignedTechnicians.length > 0 ? (
+                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                      {location.assignedTechnicians.length} assigned
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 text-xs">No technicians assigned</span>
+                  )}
+                </div>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex justify-end space-x-2">
                   <button
-                    onClick={() => onViewOnMap(location)}
-                    className="text-gray-600 hover:text-gray-900"
+                    onClick={() => onViewOnMap && onViewOnMap(location)}
+                    className="text-indigo-600 hover:text-indigo-900"
                     title="View on map"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,8 +90,17 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap 
                     </svg>
                   </button>
                   <button
-                    onClick={() => onEdit(location)}
+                    onClick={() => onAssignTechnicians && onAssignTechnicians(location)}
                     className="text-blue-600 hover:text-blue-900"
+                    title="Assign technicians"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h10m-5 4h5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => onEdit && onEdit(location)}
+                    className="text-green-600 hover:text-green-900"
                     title="Edit location"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +108,7 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap 
                     </svg>
                   </button>
                   <button
-                    onClick={() => onDelete(location._id)}
+                    onClick={() => onDelete && onDelete(location)}
                     className="text-red-600 hover:text-red-900"
                     title="Delete location"
                   >

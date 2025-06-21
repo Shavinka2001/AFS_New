@@ -206,3 +206,65 @@ exports.getNearbyLocations = async (req, res) => {
     });
   }
 };
+
+// Assign technicians to a location
+exports.assignTechnicians = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { technicianIds } = req.body;
+    
+    // Validate input
+    if (!technicianIds || !Array.isArray(technicianIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input. technicianIds must be an array'
+      });
+    }
+    
+    // Find the location
+    const location = await Location.findById(id);
+    if (!location) {
+      return res.status(404).json({
+        success: false,
+        message: 'Location not found'
+      });
+    }
+    
+    // Update location with assigned technicians
+    location.assignedTechnicians = technicianIds;
+    await location.save();
+    
+    res.json({
+      success: true,
+      message: 'Technicians assigned successfully',
+      data: location
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to assign technicians'
+    });
+  }
+};
+
+// Get all locations assigned to the logged-in technician
+exports.getAssignedLocations = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Find all locations where the user is an assigned technician
+    const locations = await Location.find({ assignedTechnicians: userId })
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      count: locations.length,
+      data: locations
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch assigned locations'
+    });
+  }
+};

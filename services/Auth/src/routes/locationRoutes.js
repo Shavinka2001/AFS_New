@@ -10,11 +10,13 @@ router.use(protect);
 // Routes accessible to all authenticated users
 router.get('/', locationController.getAllLocations);
 router.get('/:id', locationController.getLocationById);
+router.get('/assigned/me', locationController.getAssignedLocations); // New route to get assigned locations
 
 // Routes accessible to admins only
 router.post('/', isAdmin, locationController.createLocation);
 router.put('/:id', isAdmin, locationController.updateLocation);
 router.delete('/:id', isAdmin, locationController.deleteLocation);
 router.patch('/:id/toggle-status', isAdmin, locationController.toggleLocationStatus);
+router.post('/:id/assign-technicians', isAdmin, locationController.assignTechnicians); // New route
 
 module.exports = router;

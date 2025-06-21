@@ -33,6 +33,9 @@ const LocationSchema = new mongoose.Schema({
     type: String,  // User ID who created this location
     required: true
   },
+  assignedTechnicians: [{
+    type: String   // User IDs of assigned technicians
+  }],
   isActive: {
     type: Boolean,
     default: true

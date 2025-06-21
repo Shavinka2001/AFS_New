@@ -138,3 +138,38 @@ export const getNearbyLocations = async (latitude, longitude, maxDistance) => {
     throw { message: errorMessage, originalError: error };
   }
 };
+
+// Get locations assigned to the logged-in technician
+export const getAssignedLocations = async () => {
+  try {
+    const response = await api.get('/assigned/me', {
+      headers: authHeader(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error getting assigned locations:', error);
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Error retrieving assigned locations';
+    throw { message: errorMessage, originalError: error };
+  }
+};
+
+// Assign technicians to a location
+export const assignTechnicians = async (locationId, technicianIds) => {
+  try {
+    const response = await api.post(`/${locationId}/assign-technicians`, 
+      { technicianIds },
+      { headers: authHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error assigning technicians:', error);
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Error assigning technicians';
+    throw { message: errorMessage, originalError: error };
+  }
+};

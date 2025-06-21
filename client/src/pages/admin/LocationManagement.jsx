@@ -4,12 +4,15 @@ import { getLocations, createLocation, deleteLocation, updateLocation } from '..
 import LocationMap from '../../components/admin/location/LocationMap';
 import LocationTable from '../../components/admin/location/LocationTable';
 import LocationModal from '../../components/admin/location/LocationModal';
+import AssignedLocations from '../../components/admin/location/AssignedLocations';
+import AssignTechniciansModal from '../../components/admin/location/AssignTechniciansModal';
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isEdit, setIsEdit] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 7.8731, lng: 80.7718 }); // Default center (Sri Lanka)
@@ -50,139 +53,120 @@ const LocationManagement = () => {
     // Center map on the location being edited
     if (location.latitude && location.longitude) {
       setMapCenter({ lat: location.latitude, lng: location.longitude });
-      setMapZoom(14);
+      setMapZoom(15);
     }
   };
 
-  const handleDeleteLocation = async (locationId) => {
-    if (window.confirm("Are you sure you want to delete this location?")) {
+  const handleDeleteLocation = async (location) => {
+    if (window.confirm(`Are you sure you want to delete ${location.name}?`)) {
       try {
-        await deleteLocation(locationId);
+        await deleteLocation(location._id);
         toast.success("Location deleted successfully");
         fetchLocations();
       } catch (err) {
-        toast.error(err.message || "Error deleting location");
+        toast.error(err.message || "Failed to delete location");
       }
     }
   };
 
-  const handleSubmit = async (locationData) => {
+  const handleSubmitLocation = async (formData) => {
     try {
       if (isEdit && selectedLocation) {
-        await updateLocation(selectedLocation._id, locationData);
+        await updateLocation(selectedLocation._id, formData);
         toast.success("Location updated successfully");
       } else {
-        await createLocation(locationData);
-        toast.success("Location added successfully");
+        await createLocation(formData);
+        toast.success("Location created successfully");
       }
-      setShowModal(false);
       fetchLocations();
+      setShowModal(false);
     } catch (err) {
-      toast.error(err.message || "Error saving location");
+      toast.error(err.message || "Failed to save location");
     }
   };
 
-  const handleMapLocationSelect = (lat, lng, address) => {
-    if (mapRef.current && mapRef.current.updateMarkerPosition) {
-      mapRef.current.updateMarkerPosition(lat, lng, address);
+  const handleViewOnMap = (location) => {
+    if (location.latitude && location.longitude) {
+      setMapCenter({ lat: location.latitude, lng: location.longitude });
+      setMapZoom(15);
+      
+      // Scroll to map if on mobile
+      const mapElement = document.getElementById('location-map');
+      if (mapElement && window.innerWidth < 768) {
+        mapElement.scrollIntoView({ behavior: 'smooth' });
+      }
     }
+  };
+
+  const handleAssignTechnicians = (location) => {
+    setSelectedLocation(location);
+    setShowAssignModal(true);
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="px-4 py-8 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                Location Management
-              </h1>
-              <p className="mt-2 text-base text-gray-700">
-                Add and manage location points for your organization
-              </p>
-            </div>
-            <button
-              onClick={handleAddLocation}
-              className="px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all duration-200 flex items-center space-x-2 shadow-lg"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Add New Location</span>
-            </button>
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Location Management</h1>
+        <button 
+          onClick={handleAddLocation}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+        >
+          Add New Location
+        </button>
+      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="order-2 lg:order-1">
+          <div className="bg-white shadow rounded-lg p-4">
+            <h2 className="text-xl font-semibold mb-4">Locations</h2>
+            <LocationTable 
+              locations={locations} 
+              loading={loading}
+              onEdit={handleEditLocation}
+              onDelete={handleDeleteLocation}
+              onViewOnMap={handleViewOnMap}
+              onAssignTechnicians={handleAssignTechnicians}
+            />
           </div>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-xl animate-fadeIn shadow-lg">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Location Map */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-              <h2 className="text-xl font-bold text-gray-900">Interactive Map</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Click on the map to select a location or search for an address
-              </p>
-            </div>
-            <div className="p-6">
+        
+        <div id="location-map" className="order-1 lg:order-2">
+          <div className="bg-white shadow rounded-lg p-4">
+            <h2 className="text-xl font-semibold mb-4">Map View</h2>
+            <div className="h-[400px] w-full">
               <LocationMap 
-                ref={mapRef}
-                locations={locations} 
+                locations={locations}
                 center={mapCenter}
                 zoom={mapZoom}
-                onLocationSelect={handleMapLocationSelect}
-                editingLocation={selectedLocation}
-                height="500px"
-              />
-            </div>
-          </div>
-
-          {/* Locations Table */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-              <h2 className="text-xl font-bold text-gray-900">Locations</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage your saved locations
-              </p>
-            </div>
-            <div className="p-6">
-              <LocationTable 
-                locations={locations}
-                loading={loading}
-                onEdit={handleEditLocation}
-                onDelete={handleDeleteLocation}
-                onViewOnMap={(location) => {
-                  setMapCenter({ lat: location.latitude, lng: location.longitude });
-                  setMapZoom(15);
-                }}
+                onMarkerClick={handleEditLocation}
+                mapRef={mapRef}
               />
             </div>
           </div>
         </div>
       </div>
-
-      {/* Location Modal */}
+      
+      {/* Assigned Locations Section for Technician Management */}
+      <div className="mt-8">
+        <AssignedLocations isAdmin={true} />
+      </div>
+      
       {showModal && (
-        <LocationModal
+        <LocationModal 
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmitLocation}
           location={selectedLocation}
           isEdit={isEdit}
           mapRef={mapRef}
+        />
+      )}
+      
+      {showAssignModal && (
+        <AssignTechniciansModal
+          isOpen={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          location={selectedLocation}
+          onAssign={fetchLocations}
         />
       )}
     </div>

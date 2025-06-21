@@ -44,16 +44,21 @@ export const getWorkOrders = async () => {
 };
 
 export const getWorkOrdersByUserId = async (userId) => {
+  if (!userId) {
+    console.error('Cannot fetch work orders: User ID is undefined');
+    return []; // Return empty array instead of throwing to avoid crashes
+  }
+  
   try {
-    console.log('Fetching work orders for user ID:', userId); // Debug log
+    console.log('Fetching work orders for user ID:', userId);
     const response = await api.get(`/user/${userId}`, {
       headers: authHeader(),
     });
-    console.log('Get work orders by user response:', response.data); // Debug log
-    return response.data;
+    console.log('Get work orders by user response:', response.data);
+    return response.data || [];
   } catch (error) {
-    console.error('Error fetching user work orders:', error.response || error); // Debug log
-    throw new Error(error.response?.data?.message || 'Failed to fetch user work orders');
+    console.error('Error fetching user work orders:', error.response || error);
+    return []; // Return empty array instead of throwing to avoid crashes
   }
 };
 
