@@ -32,12 +32,11 @@ function AdminLayout() {
         { name: 'Dashboard', to: '/admin', icon: HomeIcon },
         { name: 'User Management', to: '/admin/users', icon: UsersIcon },
         { name: 'Confine Space Work Orders', to: '/admin/workorders', icon: ClipboardDocumentListIcon },
-    ];
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('User');
-        navigate('/login');
+    ];    const handleLogout = () => {
+        // Use the centralized logout function from userService
+        import('../../services/userService').then(({ logout }) => {
+            logout(navigate);
+        });
     };
 
     const SidebarNavLink = ({ item }) => (

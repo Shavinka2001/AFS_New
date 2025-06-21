@@ -69,14 +69,11 @@ function TechnicianDashboard() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('User');
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('User');
-        navigate('/login');
+    };    const handleLogout = () => {
+        // Use the centralized logout function from userService
+        import('../../services/userService').then(({ logout }) => {
+            logout(navigate);
+        });
     };
 
     const handleEditWorkOrder = (order) => {

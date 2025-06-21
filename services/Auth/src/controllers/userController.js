@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../../src/model/User.js');
+const User = require('../model/User');
 
 // Register
 exports.register = async (req, res) => {
@@ -46,20 +46,63 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Find the user by email
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
+      });
+    }
 
+    // Check if user account is active
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact an administrator.'
+      });
+    }
+
+    // Verify password
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: 'Invalid credentials' });
-
-    const token = jwt.sign(
-      { userId: user._id, isAdmin: user.isAdmin, userType: user.userType },
+    if (!match) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
+      });
+    }    // Import token generator and generate tokens
+    const jwt = require('jsonwebtoken');
+    
+    // Generate access token
+    const accessToken = jwt.sign(
+      { 
+        userId: user._id, 
+        isAdmin: user.isAdmin, 
+        userType: user.userType 
+      },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '15m' } // short-lived token
+    );
+    
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' } // longer-lived refresh token
     );
 
+    // Set refresh token in a secure, httpOnly cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // Send the response with tokens and user info
     res.json({
-      token,
+      success: true,
+      accessToken,
       user: {
         id: user._id,
         firstname: user.firstname,
@@ -67,11 +110,16 @@ exports.login = async (req, res) => {
         email: user.email,
         phone: user.phone,
         userType: user.userType,
-        isAdmin: user.isAdmin
+        isAdmin: user.isAdmin,
+        isActive: user.isActive
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during authentication' 
+    });
   }
 };
 

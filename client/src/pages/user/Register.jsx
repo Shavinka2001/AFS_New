@@ -23,9 +23,8 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-    try {
-      // Use the correct backend URL for registration
-      const res = await fetch("http://localhost:5000/api/users/register", {
+    try {      // Use the correct backend URL for registration
+      const res = await fetch("http://localhost:5001/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

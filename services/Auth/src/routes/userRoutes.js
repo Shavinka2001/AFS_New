@@ -1,14 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const { refreshToken } = require('../controllers/authController');
 const protect = require('../middleware/authMiddleware');
+const isAdmin = require('../middleware/roleMiddleware');
 const multer = require('multer');
 const path = require('path');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/');
+        // Ensure uploads directory exists
+        const fs = require('fs');
+        const uploadDir = 'uploads/';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -29,15 +37,23 @@ const upload = multer({
     }
 });
 
-// Helper middleware to check admin
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) return next();
-  res.status(403).json({ message: "Admin access required" });
-};
-
-// Public routes (register and login) - these must come before the protected routes!
+// Public routes (register and login)
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+router.post('/refresh-token', refreshToken);
+
+// Authentication check routes
+router.get('/verify-token', protect, (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: 'Token is valid',
+    user: {
+      userId: req.user.userId,
+      userType: req.user.userType,
+      isAdmin: req.user.isAdmin
+    }
+  });
+});
 
 // Protected routes
 router.get("/", protect, isAdmin, userController.getAllUsers);
@@ -49,5 +65,8 @@ router.put("/self", protect, upload.single('profileImage'), userController.updat
 router.get("/:id", protect, isAdmin, userController.getUserById);
 router.put("/:id", protect, isAdmin, userController.updateUserById);
 router.delete("/:id", protect, isAdmin, userController.deleteUser);
+
+// Admin-only route to create new users
+router.post("/", protect, isAdmin, userController.createUser);
 
 module.exports = router;

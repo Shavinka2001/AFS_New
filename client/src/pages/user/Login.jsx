@@ -1,59 +1,69 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { login, getUser } from "../../services/userService";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [remember, setRemember] = useState(true);
   const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if there's any redirect message from other pages
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const msg = params.get('message');
+    const type = params.get('type') || 'info';
+    
+    if (msg) {
+      setMessage({ type, text: msg });
+    }
+    
+    // Check if user is already logged in
+    const user = getUser();
+    if (user) {
+      navigate(user.isAdmin ? "/admin" : "/user/dashboard");
+    }
+  }, [location, navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleRememberChange = (e) => {
+    setRemember(e.target.checked);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
-    setRemember(true); // Reset remember checkbox on submit
+    setLoading(true);
+    
     try {
-      const res = await fetch("http://localhost:5000/api/users/login", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json"
-        },
-        credentials: 'include',
-        body: JSON.stringify(form),
+      const { email, password } = form;
+      const data = await login(email, password, remember);
+      
+      setMessage({ 
+        type: "success", 
+        text: "Login successful! Redirecting..." 
       });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage({ type: "success", text: "Login successful! Redirecting..." });
-        console.log("Login response:", data); // Debug log
-
-        // Store token and user info
-        if (remember) {
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("User", JSON.stringify(data.user));
+      
+      // Navigate based on user role
+      setTimeout(() => {
+        if (data.user.isAdmin || data.user.userType === 'admin') {
+          navigate("/admin");
         } else {
-          sessionStorage.setItem("token", data.token);
-          sessionStorage.setItem("User", JSON.stringify(data.user));
+          navigate("/user/dashboard");
         }
-
-        // Check if user is admin
-        const isAdmin = data.user?.userType === 'admin' || data.user?.isAdmin;
-        console.log("Is admin:", isAdmin); // Debug log
-
-        setTimeout(() => {
-          if (isAdmin) {
-            navigate("/admin");
-          } else {
-            navigate("/user/dashboard");
-          }
-        }, 1000);
-      } else {
-        setMessage({ type: "error", text: data.message || "Login failed." });
-      }
-    } catch (err) {
-      setMessage({ type: "error", text: err.message || "Network error." });
+      }, 1000);
+    } catch (error) {
+      setMessage({ 
+        type: "error", 
+        text: error.message || "Invalid email or password. Please try again." 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,30 +133,32 @@ const Login = () => {
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0a2342] transition shadow-sm"
               placeholder="••••••••"
             />
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-[#0a2342]">
-            <label className="flex items-center">
+          </div>          <div className="flex items-center justify-between text-sm text-[#0a2342]">
+            <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={remember}
+                onChange={handleRememberChange}
                 className="mr-2 accent-[#0a2342]"
               />
               Remember me
             </label>
             <a
-              href="#"
+              href="/forgot-password"
               className="hover:underline font-medium text-[#19376d]"
             >
               Forgot password?
             </a>
-          </div>
-
-          <button
+          </div>          <button
             type="submit"
-            className="w-full py-3 bg-[#0a2342] text-white font-semibold rounded-xl hover:bg-[#0e2f5a] transition shadow-md"
+            disabled={loading}
+            className={`w-full py-3 text-white font-semibold rounded-xl transition shadow-md ${
+              loading 
+                ? "bg-gray-500 cursor-not-allowed" 
+                : "bg-[#0a2342] hover:bg-[#0e2f5a]"
+            }`}
           >
-            Sign In
+            {loading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
