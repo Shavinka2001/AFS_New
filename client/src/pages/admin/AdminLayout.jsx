@@ -15,14 +15,22 @@ function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [user, setUser] = useState({ firstname: "", lastname: "" });
-
-    useEffect(() => {
+    const [user, setUser] = useState({ firstname: "", lastname: "" });    useEffect(() => {
         const userData = localStorage.getItem("User");
         if (userData) {
             setUser(JSON.parse(userData));
+        } else {
+            // If no user data, redirect to login
+            navigate('/login');
         }
-    }, []);
+        
+        // Verify auth status when component mounts
+        import('../../services/userService').then(({ verifyAuth }) => {
+            verifyAuth().catch(() => {
+                navigate('/login');
+            });
+        });
+    }, [navigate]);
 
     const stats = {
         totalWorkOrders: 150,

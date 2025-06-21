@@ -10,7 +10,7 @@ const generateTokens = (user) => {
       userType: user.userType 
     },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' } // short-lived token
+    { expiresIn: '1d' } // short-lived token - 30 minutes
   );
 
   const refreshToken = jwt.sign(
@@ -34,7 +34,8 @@ const refreshToken = async (req, res) => {
     if (!refreshToken && !bodyToken) {
       return res.status(401).json({ 
         success: false,
-        message: 'Refresh token is required' 
+        message: 'Refresh token is required',
+        expired: true // Add expired flag to trigger auto logout
       });
     }
     
@@ -48,14 +49,16 @@ const refreshToken = async (req, res) => {
     if (!user) {
       return res.status(404).json({ 
         success: false,
-        message: 'User not found' 
+        message: 'User not found',
+        expired: true // Add expired flag to trigger auto logout
       });
     }
     
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        message: 'Your account has been deactivated'
+        message: 'Your account has been deactivated',
+        expired: true // Add expired flag to trigger auto logout
       });
     }
 

@@ -19,9 +19,7 @@ function TechnicianDashboard() {
     const [profileImage, setProfileImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [showUpdateForm, setShowUpdateForm] = useState(false);
-    const navigate = useNavigate();
-
-    useEffect(() => {
+    const navigate = useNavigate();    useEffect(() => {
         const userData = localStorage.getItem("User") || sessionStorage.getItem("User");
         if (userData) {
             try {
@@ -32,9 +30,20 @@ function TechnicianDashboard() {
                 }
             } catch (error) {
                 console.error("Error parsing user data:", error);
+                navigate('/login');
             }
+        } else {
+            // If no user data, redirect to login
+            navigate('/login');
         }
-    }, []);
+        
+        // Verify auth status when component mounts
+        import('../../services/userService').then(({ verifyAuth }) => {
+            verifyAuth().catch(() => {
+                navigate('/login');
+            });
+        });
+    }, [navigate]);
 
     // Fetch work orders when tasks tab is active
     useEffect(() => {
