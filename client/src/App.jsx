@@ -8,6 +8,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserDashboard from "./pages/user/UserDashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import LocationManagement from "./pages/admin/LocationManagement";
 import WorkOrderManagement from "./pages/admin/workOrderManagement";
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="workorders" element={<WorkOrderManagement />} />
+          <Route path="locations" element={<LocationManagement />} />
           {/* Add more admin routes here */}
         </Route>
 

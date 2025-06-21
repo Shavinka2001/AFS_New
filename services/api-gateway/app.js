@@ -21,6 +21,11 @@ app.use(
   applyRateLimiter,
   proxy("http://localhost:5002")
 );
+app.use(
+  "/api/locations",
+  applyRateLimiter,
+  proxy("http://localhost:5003")
+);
 
 //Exporting app to be used by the server.js
 module.exports = app;

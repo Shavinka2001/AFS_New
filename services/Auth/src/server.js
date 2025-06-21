@@ -14,6 +14,7 @@ const connectDB = require('./config/db');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
+const locationRoutes = require('./routes/locationRoutes');
 
 // Connect to database
 connectDB();
@@ -46,6 +47,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use('/api/auth', userRoutes);
+app.use('/api/locations', locationRoutes);
 
 // Health check route
 app.get('/', (req, res) => res.json({

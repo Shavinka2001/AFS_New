@@ -7,6 +7,7 @@ import {
     Bars3Icon,
     XMarkIcon,
     ClipboardDocumentListIcon,
+    MapPinIcon,
 } from '@heroicons/react/24/outline';
 
 function AdminLayout() {
@@ -32,6 +33,7 @@ function AdminLayout() {
         { name: 'Dashboard', to: '/admin', icon: HomeIcon },
         { name: 'User Management', to: '/admin/users', icon: UsersIcon },
         { name: 'Confine Space Work Orders', to: '/admin/workorders', icon: ClipboardDocumentListIcon },
+        { name: 'Location Management', to: '/admin/locations', icon: MapPinIcon },
     ];    const handleLogout = () => {
         // Use the centralized logout function from userService
         import('../../services/userService').then(({ logout }) => {
