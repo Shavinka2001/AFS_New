@@ -86,12 +86,15 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener(SESSION_TIMEOUT_EVENT, handleSessionTimeout);
     };
   }, [navigate]);
-
+  // Add isAdmin helper function
+  const isAdmin = user?.isAdmin || user?.userType === 'admin';
+  
   const value = {
     isAuthenticated,
     user,
     isLoading,
-    logout: handleLogout
+    logout: handleLogout,
+    isAdmin
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

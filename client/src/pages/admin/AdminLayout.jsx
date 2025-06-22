@@ -14,27 +14,41 @@ import {
 function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();
-    const [user, setUser] = useState({ firstname: "", lastname: "" });
-    const { user: authUser, isAuthenticated, logout: authLogout } = useAuth();
-      useEffect(() => {
+    const navigate = useNavigate();    const [user, setUser] = useState({ firstname: "", lastname: "" });
+    const { user: authUser, isAuthenticated, logout: authLogout, isAdmin } = useAuth();
+      
+    useEffect(() => {
         // Only set user data once on initial render or when authUser changes
         if (authUser) {
+            // Additional check to ensure user is an admin using the helper
+            if (!isAdmin) {
+                // Redirect non-admin users to the user dashboard
+                navigate('/user/dashboard', { replace: true });
+                return;
+            }
             setUser(authUser);
         } else {
             const userData = localStorage.getItem("User") || sessionStorage.getItem("User");
             if (userData) {
                 try {
                     const parsedUser = JSON.parse(userData);
+                    // Double-check for admin privilege
+                    if (!(parsedUser.isAdmin || parsedUser.userType === 'admin')) {
+                        navigate('/user/dashboard', { replace: true });
+                        return;
+                    }
                     setUser(parsedUser);
                 } catch (error) {
                     console.error("Error parsing user data:", error);
-                    // Don't navigate here - let ProtectedRoute handle redirection
+                    // Redirect to login on error
+                    navigate('/login', { replace: true });
                 }
+            } else {
+                // No user data, redirect to login
+                navigate('/login', { replace: true });
             }
-            // Don't navigate in this effect - let ProtectedRoute handle redirections
         }
-    }, [authUser]);
+    }, [authUser, isAdmin, navigate]);
 
     const stats = {
         totalWorkOrders: 150,

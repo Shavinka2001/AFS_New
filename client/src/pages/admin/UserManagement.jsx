@@ -36,22 +36,16 @@ const UserManagement = () => {
         let token = localStorage.getItem("token") || sessionStorage.getItem("token");
         token = token?.replace(/^"|"$/g, '');
         const userData = JSON.parse(localStorage.getItem("User") || sessionStorage.getItem("User") || "{}");
-        
-        console.log("Token:", token); // Debug log
+          console.log("Token:", token); // Debug log
         console.log("User data:", userData); // Debug log
-
+        
         if (!token) {
           setError("No authentication token found");
           setLoading(false);
           return;
         }
-
-        if (!userData.isAdmin && userData.userType !== 'admin') {
-          setError("Access denied. Admin privileges required.");
-          setLoading(false);
-          return;
-        }
-console.log(token)
+        
+        // Admin check is now handled by AdminRoute component
         const response = await api.get("/", {
           headers: {
             Authorization: `Bearer ${token}`

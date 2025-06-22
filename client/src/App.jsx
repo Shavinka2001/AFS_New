@@ -12,6 +12,7 @@ import LocationManagement from "./pages/admin/LocationManagement";
 import WorkOrderManagement from "./pages/admin/workOrderManagement";
 import SessionTimeoutAlert from "./components/common/SessionTimeoutAlert";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import AdminRoute from "./components/common/AdminRoute";
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -36,11 +37,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Admin routes with layout */}       
+        {/* Admin routes with layout - protected with AdminRoute */}       
          <Route path="/admin" element={
-          <ProtectedRoute>
+          <AdminRoute>
             <AdminLayout />
-          </ProtectedRoute>
+          </AdminRoute>
         }>
           <Route index element={<AdminDashboard />} />
           <Route path="dashboard" element={<AdminDashboard />} />
