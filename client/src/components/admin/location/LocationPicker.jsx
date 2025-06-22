@@ -13,6 +13,25 @@ const LocationPicker = ({ onLocationSelected, initialLocation = null }) => {
   const [map, setMap] = useState(null);
   const [geocoder, setGeocoder] = useState(null);
   
+  // Update marker position when initialLocation changes (e.g., from search)
+  useEffect(() => {
+    if (initialLocation) {
+      setMarkerPosition({
+        lat: initialLocation[0],
+        lng: initialLocation[1]
+      });
+      
+      // If map is loaded, center it on the new location
+      if (map) {
+        map.panTo({
+          lat: initialLocation[0],
+          lng: initialLocation[1]
+        });
+        map.setZoom(15); // Zoom in to see the area clearly
+      }
+    }
+  }, [initialLocation, map]);
+  
   useEffect(() => {
     if (isLoaded && !geocoder) {
       setGeocoder(new window.google.maps.Geocoder());

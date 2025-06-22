@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import LocationPicker from './LocationPicker';
+import LocationSearchBar from './LocationSearchBar';
 
 const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) => {
   const [formData, setFormData] = useState({
@@ -156,8 +157,18 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
             </div>
           </div>          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Location on Map*
+              Search for a Location or Select on Map*
             </label>
+            <LocationSearchBar 
+              onLocationFound={(coords) => {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                  address: coords.address || prev.address
+                }));
+              }}
+            />
             <LocationPicker 
               onLocationSelected={(coords) => {
                 setFormData(prev => ({
@@ -178,7 +189,8 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
                 Selected coordinates: {Number(formData.latitude).toFixed(6)}, {Number(formData.longitude).toFixed(6)}
               </p>
             )}
-            <p className="mt-2 text-sm text-gray-600">              {formData.address || 'No address selected yet. Click on the map to select a location.'}
+            <p className="mt-2 text-sm text-gray-600">
+              {formData.address || 'No address selected yet. Search for a location or click on the map to select.'}
             </p>
           </div>
 

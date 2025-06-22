@@ -6,7 +6,7 @@ export const mapsLoaderOptions = {
   id: 'google-map-script',
   googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   version: 'weekly',
-  libraries: ['maps'],
+  libraries: ['maps', 'places'], // Added places library for location search
   language: 'en',
   region: 'US',
   authReferrerPolicy: 'origin'
