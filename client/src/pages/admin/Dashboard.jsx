@@ -92,101 +92,107 @@ const UserTable = ({ users, loading }) => {
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
   // No expanded state needed since we want to show all orders by default
   
-  return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transition-all hover:shadow-xl">
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+  return (    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-2 py-2 border-b border-gray-200">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <LocationIcon className="h-5 w-5 text-gray-700" />
-            <h3 className="text-lg font-bold text-gray-900">{location.name}</h3>
+          <div className="flex items-center space-x-1.5">
+            <LocationIcon className="h-3.5 w-3.5 text-gray-700" />
+            <div>
+              <h3 className="text-xs font-bold text-gray-900 leading-tight">{location.name}</h3>
+              <p className="text-2xs text-gray-600 truncate max-w-[150px]">{location.address}</p>
+            </div>
           </div>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {orders.length} Order{orders.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center space-x-1.5">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-2xs font-medium bg-blue-100 text-blue-800">
+              {orders.length}
+            </span>
+            <button
+              onClick={() => onAddOrder(location)}
+              className="p-0.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Add Work Order"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <p className="text-sm text-gray-600 mt-1">{location.address}</p>
-      </div>
-      
-      <div className="p-4">        {orders.length === 0 ? (
-          <div className="text-center py-6">
-            <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <ClipboardIcon className="h-6 w-6 text-gray-400" />
-            </div>
-            <p className="text-gray-500">No work orders for this location.</p>
-           
+      </div><div className="px-2 py-1.5">{orders.length === 0 ? (          <div className="flex items-center justify-center text-center py-1">
+            <ClipboardIcon className="h-3 w-3 text-gray-400 mr-1" />
+            <p className="text-2xs text-gray-500">No work orders</p>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-xs font-medium text-gray-500">{orders.length} work order{orders.length !== 1 ? 's' : ''} found</p>
-              
-              {/* Add new work order button for this location */}
-             
-             
-            </div>
-            
-            {/* Always show all orders without limit */}
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-              {orders.map((order, index) => (
-                <div key={order._id || index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{order.confinedSpaceNameOrId}</p>
-                      <div className="flex items-center mt-1 text-xs text-gray-500">
-                        <CalendarIcon className="mr-1 h-3 w-3" />
-                        <span>{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
-                      </div>
-                    </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      order.permitRequired 
-                        ? 'bg-amber-100 text-amber-800 border border-amber-300' 
-                        : 'bg-green-100 text-green-800 border border-green-300'
-                      }`}>
-                      {order.permitRequired ? "Permit Required" : "No Permit"}
-                    </span>
-                  </div>
-                  
-                               <div className="mt-3 pt-2 border-t border-gray-200 flex justify-end space-x-2">
-                    <button 
-                      onClick={() => onViewOrder(order)} 
-                      className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
-                      title="View Order"
+        ) : (<div className="space-y-1">
+            {/* Even more compact table-like view */}
+            <div className="max-h-80 overflow-y-auto -mx-2">
+              <table className="min-w-full text-xs border-collapse">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr className="text-xs">
+                    <th scope="col" className="px-1.5 py-1 text-left text-xs font-medium text-gray-500">
+                      ID
+                    </th>
+                    <th scope="col" className="px-1.5 py-1 text-left text-xs font-medium text-gray-500">
+                      Date
+                    </th>
+                    <th scope="col" className="px-1.5 py-1 text-right text-xs font-medium text-gray-500">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {orders.map((order, index) => (
+                    <tr 
+                      key={order._id || index} 
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => downloadSinglePDF(order)}
-                      className="p-1.5 rounded text-gray-700 hover:bg-gray-50 transition-colors"
-                      title="Download PDF"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => onDeleteOrder(order._id)} 
-                      className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"
-                      title="Delete Order"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                    <a 
-                      href="/admin/workorders" 
-                      className="p-1.5 rounded text-slate-600 hover:bg-slate-50 transition-colors"
-                      title="Go to Work Order Management"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </div>
-                </div>
-              ))}
+                      <td className="px-1.5 py-1 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="font-medium text-gray-900 truncate max-w-[100px]">{order.confinedSpaceNameOrId}</span>
+                          <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
+                                title={order.permitRequired ? "Permit Required" : "No Permit Required"}>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-1.5 py-1 whitespace-nowrap text-2xs text-gray-500">
+                        <div className="flex items-center">
+                          <CalendarIcon className="mr-0.5 h-2.5 w-2.5 flex-shrink-0" />
+                          <span className="truncate max-w-[80px]">{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
+                        </div>
+                      </td>
+                      <td className="px-1.5 py-1 whitespace-nowrap text-right">
+                        <div className="flex justify-end space-x-0.5">
+                          <button 
+                            onClick={() => onViewOrder(order)} 
+                            className="p-0.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
+                            title="View Order"
+                          >
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => downloadSinglePDF(order)}
+                            className="p-0.5 rounded text-gray-600 hover:bg-gray-50 transition-colors"
+                            title="Download PDF"
+                          >
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => onDeleteOrder(order._id)} 
+                            className="p-0.5 rounded text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Order"
+                          >
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

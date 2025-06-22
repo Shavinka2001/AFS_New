@@ -3,12 +3,14 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
+  ],  theme: {
     extend: {
       animation: {
         'fadeIn': 'fadeIn 0.3s ease-in-out',
         'slideUp': 'slideUp 0.3s ease-out',
+      },
+      fontSize: {
+        '2xs': '0.65rem', // Smaller than xs for extremely compact layouts
       },
       keyframes: {
         fadeIn: {
