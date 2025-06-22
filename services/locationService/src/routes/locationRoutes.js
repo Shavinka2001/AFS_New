@@ -17,6 +17,6 @@ router.get('/', protect, locationController.getAllLocations); // All users can v
 router.get('/:id', protect, locationController.getLocationById);
 router.put('/:id', protect, isAdmin, locationController.updateLocation);
 router.delete('/:id', protect, isAdmin, locationController.deleteLocation);
-router.post('/:id/assign-technicians', protect, isAdmin, locationController.assignTechnicians); // New route
+router.post('/:id/assign-technicians', protect, locationController.assignTechnicians); // Allow both admins and technicians (for self-detachment)
 
 module.exports = router;

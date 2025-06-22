@@ -212,6 +212,8 @@ exports.assignTechnicians = async (req, res) => {
   try {
     const { id } = req.params;
     const { technicianIds } = req.body;
+    const userId = req.user.userId;
+    const isAdmin = req.user.isAdmin;
     
     // Validate input
     if (!technicianIds || !Array.isArray(technicianIds)) {
@@ -230,8 +232,30 @@ exports.assignTechnicians = async (req, res) => {
       });
     }
     
-    // Update location with assigned technicians
-    location.assignedTechnicians = technicianIds;
+    // Special case: Allow non-admin technicians to detach themselves from a location
+    // This is used for the "Close Work" functionality
+    const isSelfDetachment = !isAdmin && technicianIds.length === 0;
+    
+    // For self-detachment, we need to check if the user is assigned to this location
+    if (isSelfDetachment) {
+      // Verify the user is actually assigned to this location
+      if (!location.assignedTechnicians.includes(userId) && 
+          !location.assignedTechnicians.some(id => id.toString() === userId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not assigned to this location'
+        });
+      }
+      
+      // Remove the user from the location's technicians
+      location.assignedTechnicians = location.assignedTechnicians.filter(
+        techId => techId.toString() !== userId
+      );
+    } else {
+      // Regular admin update
+      location.assignedTechnicians = technicianIds;
+    }
+    
     await location.save();
     
     res.json({

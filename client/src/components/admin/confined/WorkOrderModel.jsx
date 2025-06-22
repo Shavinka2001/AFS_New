@@ -382,10 +382,9 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     type="text" 
                     name="confinedSpaceNameOrId" 
                     value={formData.confinedSpaceNameOrId || (assignedLocations[0]?.name || assignedLocations[0] || "")} 
-                    onChange={assignedLocations.length === 1 ? undefined : handleChange}
-                    readOnly={assignedLocations.length === 1}
+                    readOnly
                     required 
-                    className={`w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none ${assignedLocations.length === 1 ? 'bg-gray-100 cursor-not-allowed focus:ring-1 focus:ring-gray-300' : 'focus:ring-2 focus:ring-gray-500'} focus:border-transparent transition-all`}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed"
                   />
                 ) : (
                   <input 
@@ -397,27 +396,46 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                   />
                 )}
-              </div>
-              <div>
+              </div>              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Building *</label>
-                <input 
-                  type="text" 
-                  name="building" 
-                  value={formData.building || ""} 
-                  onChange={handleChange} 
-                  required 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
-                />
-              </div>
-              <div className="md:col-span-2">
+                {assignedLocations.length > 0 ? (
+                  <input 
+                    type="text" 
+                    name="building" 
+                    value={formData.building || ""} 
+                    readOnly
+                    required 
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
+                  />
+                ) : (
+                  <input 
+                    type="text" 
+                    name="building" 
+                    value={formData.building || ""} 
+                    onChange={handleChange} 
+                    required 
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                  />
+                )}
+              </div>              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location Description</label>
-                <input 
-                  type="text" 
-                  name="locationDescription" 
-                  value={formData.locationDescription || ""} 
-                  onChange={handleChange} 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
-                />
+                {assignedLocations.length > 0 ? (
+                  <input 
+                    type="text" 
+                    name="locationDescription" 
+                    value={formData.locationDescription || ""} 
+                    readOnly
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
+                  />
+                ) : (
+                  <input 
+                    type="text" 
+                    name="locationDescription" 
+                    value={formData.locationDescription || ""} 
+                    onChange={handleChange} 
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                  />
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">Confined Space Description</label>

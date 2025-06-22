@@ -173,3 +173,22 @@ export const assignTechnicians = async (locationId, technicianIds) => {
     throw { message: errorMessage, originalError: error };
   }
 };
+
+// Detach a technician from a location (close work)
+export const detachTechnicianFromLocation = async (locationId) => {
+  try {
+    // We're using the same endpoint but passing an empty array to remove the technician
+    const response = await api.post(`/${locationId}/assign-technicians`, 
+      { technicianIds: [] },
+      { headers: authHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error detaching technician from location:', error);
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Error detaching technician from location';
+    throw { message: errorMessage, originalError: error };
+  }
+};

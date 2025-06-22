@@ -212,6 +212,8 @@ exports.assignTechnicians = async (req, res) => {
   try {
     const { locationId } = req.params;
     const { technicianIds } = req.body;
+    const userId = req.user.userId;
+    const isAdmin = req.user.isAdmin;
 
     if (!locationId) {
       return res.status(StatusCodes.BAD_REQUEST).json({ 
@@ -224,6 +226,10 @@ exports.assignTechnicians = async (req, res) => {
         message: 'Technician IDs array is required' 
       });
     }
+    
+    // Special case: Allow non-admin technicians to detach themselves from a location
+    // This is used for the "Close Work" functionality
+    const isSelfDetachment = !isAdmin && technicianIds.length === 0;
 
     // Find the location
     const location = await Location.findById(locationId);
@@ -237,41 +243,72 @@ exports.assignTechnicians = async (req, res) => {
     const previouslyAssignedTechs = [...location.assignedTechnicians];
     const techsToRemove = previouslyAssignedTechs.filter(
       techId => !technicianIds.includes(techId.toString())
-    );    // Check if any of the new technicians are already assigned to another location
-    for (const techId of technicianIds) {
-      // Skip technicians that are already assigned to this location
-      if (previouslyAssignedTechs.includes(techId.toString())) {
-        continue;
+    );    // For self-detachment, we need to check if the user is assigned to this location
+    if (isSelfDetachment) {
+      // Verify the user is actually assigned to this location
+      if (!previouslyAssignedTechs.includes(userId) && 
+          !previouslyAssignedTechs.some(id => id.toString() === userId)) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: 'You are not assigned to this location'
+        });
       }
       
-      const technician = await User.findById(techId);
-      
-      if (technician && technician.assignedLocations && technician.assignedLocations.length > 0) {
-        // Check if the technician is assigned to a different location
-        const otherLocations = technician.assignedLocations.filter(
-          locId => locId.toString() !== locationId
-        );
+      // If it's a self-detachment, we only remove the current user
+      techsToRemove.push(userId);
+    }
+    // Admin is adding/updating technicians - do the regular checks
+    else if (!isSelfDetachment) {
+      // Check if any of the new technicians are already assigned to another location
+      for (const techId of technicianIds) {
+        // Skip technicians that are already assigned to this location
+        if (previouslyAssignedTechs.includes(techId.toString())) {
+          continue;
+        }
         
-        if (otherLocations.length > 0) {
-          return res.status(StatusCodes.BAD_REQUEST).json({
-            message: `Technician ${technician.firstname} ${technician.lastname} is already assigned to another location. A technician can only be assigned to one location at a time.`
-          });
+        const technician = await User.findById(techId);
+        
+        if (technician && technician.assignedLocations && technician.assignedLocations.length > 0) {
+          // Check if the technician is assigned to a different location
+          const otherLocations = technician.assignedLocations.filter(
+            locId => locId.toString() !== locationId
+          );
+          
+          if (otherLocations.length > 0) {
+            return res.status(StatusCodes.BAD_REQUEST).json({
+              message: `Technician ${technician.firstname} ${technician.lastname} is already assigned to another location. A technician can only be assigned to one location at a time.`
+            });
+          }
         }
       }
     }
-    
-    // Update the location with the new technicians
-    location.assignedTechnicians = technicianIds;
-    await location.save();
-
-    // Update each technician user by adding this location to their assignedLocations
-    for (const techId of technicianIds) {
-      // First remove any existing location assignments
+      if (isSelfDetachment) {
+      // For self-detachment, just remove the user from the location's technicians
+      location.assignedTechnicians = location.assignedTechnicians.filter(
+        techId => techId.toString() !== userId
+      );
+      await location.save();
+      
+      // Remove this location from the user's assignedLocations
       await User.findByIdAndUpdate(
-        techId,
-        { $set: { assignedLocations: [locationId] } }, // Replace with just this location
+        userId,
+        { $pull: { assignedLocations: locationId } },
         { new: true }
       );
+    } else {
+      // Regular admin update
+      // Update the location with the new technicians
+      location.assignedTechnicians = technicianIds;
+      await location.save();
+  
+      // Update each technician user by adding this location to their assignedLocations
+      for (const techId of technicianIds) {
+        // First remove any existing location assignments
+        await User.findByIdAndUpdate(
+          techId,
+          { $set: { assignedLocations: [locationId] } }, // Replace with just this location
+          { new: true }
+        );
+      }
     }
 
     // For technicians who were removed, update their assignedLocations as well

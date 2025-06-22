@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import WorkOrderModal from '../../components/admin/confined/WorkOrderModel';
 import WorkOrderTable from '../../components/admin/confined/WorkOrderTable';
 import { createWorkOrder, updateWorkOrder, getWorkOrders, deleteWorkOrder, getWorkOrdersByUserId } from '../../services/workOrderService';
-import { getAssignedLocations } from '../../services/locationService';
+import { getAssignedLocations, detachTechnicianFromLocation } from '../../services/locationService';
 import { toast } from 'react-toastify';
 import ProfileHeader from '../../components/user/ProfileHeader';
 import PersonalInformation from '../../components/user/PersonalInformation';
@@ -105,8 +105,33 @@ function TechnicianDashboard() {
             setAssignedLocations([]);
         } finally {
             setLoadingLocations(false);
+        }    };
+      // State to track which location is being closed
+    const [closingLocationId, setClosingLocationId] = useState(null);
+    
+    // Handle closing work (detaching technician from location)
+    const handleCloseWork = async (locationId) => {
+        if (window.confirm("Are you sure you want to close this work? This will remove your assignment from this location.")) {
+            try {
+                // Set the specific location as loading
+                setClosingLocationId(locationId);
+                
+                await detachTechnicianFromLocation(locationId);
+                toast.success("Work closed successfully. You have been unassigned from this location.");
+                
+                // Refresh assigned locations to reflect the change
+                await fetchAssignedLocations();
+            } catch (error) {
+                console.error("Error closing work:", error);
+                toast.error(error.message || "Failed to close work. Please try again.");
+            } finally {
+                // Clear the loading state
+                setClosingLocationId(null);
+            }
         }
-    };    const handleLogout = () => {
+    };
+
+    const handleLogout = () => {
         // Use the centralized logout function from userService
         import('../../services/userService').then(({ logout }) => {
             logout(navigate);
@@ -376,8 +401,7 @@ function TechnicianDashboard() {
                                                         <p className="text-sm text-gray-700 mt-1">{location.description}</p>
                                                     </div>
                                                 )}
-                                                
-                                                <div className="mt-6 pt-4 border-t border-gray-200">
+                                                  <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedWorkOrder(null);
@@ -389,6 +413,27 @@ function TechnicianDashboard() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                                         </svg>
                                                         <span>Create Work Order</span>
+                                                    </button>
+                                                      <button
+                                                        onClick={() => handleCloseWork(location._id)}
+                                                        disabled={closingLocationId === location._id}
+                                                        className={`w-full px-4 py-2 border border-red-600 text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2 ${
+                                                            closingLocationId === location._id ? 'opacity-50 cursor-not-allowed' : ''
+                                                        }`}
+                                                    >
+                                                        {closingLocationId === location._id ? (
+                                                            <>
+                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                                                                <span>Closing...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                                <span>Close Work</span>
+                                                            </>
+                                                        )}
                                                     </button>
                                                 </div>
                                             </div>
