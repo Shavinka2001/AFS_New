@@ -9,8 +9,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Check if there's any redirect message from other pages
+  // Check if there's any redirect message from other pages and if user is already logged in
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const msg = params.get('message');
@@ -20,11 +19,25 @@ const Login = () => {
       setMessage({ type, text: msg });
     }
     
-    // Check if user is already logged in
-    const user = getUser();
-    if (user) {
-      navigate(user.isAdmin ? "/admin/dashboard" : "/user/dashboard");
-    }
+    // Check if user is already logged in - but don't do this on every render
+    const checkUserLoggedIn = () => {
+      const user = localStorage.getItem("User") || sessionStorage.getItem("User");
+      if (user) {
+        try {
+          const parsedUser = JSON.parse(user);
+          if (parsedUser.isAdmin || parsedUser.userType === 'admin') {
+            navigate("/admin/dashboard", { replace: true });
+          } else {
+            navigate("/user/dashboard", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    };
+    
+    // Only check once when component mounts
+    checkUserLoggedIn();
   }, [location, navigate]);
 
   const handleChange = (e) => {
@@ -48,13 +61,12 @@ const Login = () => {
         type: "success", 
         text: "Login successful! Redirecting..." 
       });
-      
-      // Navigate based on user role
+        // Navigate based on user role
       setTimeout(() => {
         if (data.user.isAdmin || data.user.userType === 'admin') {
-          navigate("/admin/dashboard");
+          navigate("/admin/dashboard", { replace: true });
         } else {
-          navigate("/user/dashboard");
+          navigate("/user/dashboard", { replace: true });
         }
       }, 1000);
     } catch (error) {

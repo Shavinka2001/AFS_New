@@ -17,10 +17,22 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
-  // Redirect to login if not authenticated
+    // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Check localStorage/sessionStorage directly as a fallback
+    const userData = localStorage.getItem("User") || sessionStorage.getItem("User");
+    if (userData) {
+      try {
+        // User data exists but isAuthenticated is false - this might be a race condition
+        // Let's try to use the data instead of redirecting immediately
+        return children;
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        return <Navigate to="/login" replace />;
+      }
+    } else {
+      return <Navigate to="/login" replace />;
+    }
   }
   
   // Otherwise render the children (the protected component)

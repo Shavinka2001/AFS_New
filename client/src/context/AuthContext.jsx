@@ -13,30 +13,54 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-
   // Check authentication status on mount
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates after unmount
+    
     const checkAuth = async () => {
       try {
-        const userData = localStorage.getItem('User') || sessionStorage.getItem('User');
+        // Check both User and user keys for backward compatibility
+        const userData = localStorage.getItem('User') || sessionStorage.getItem('User') || 
+                         localStorage.getItem('user') || sessionStorage.getItem('user');
+        
         if (userData) {
-          setUser(JSON.parse(userData));
-          await verifyAuth();
-          setIsAuthenticated(true);
+          const parsedUser = JSON.parse(userData);
+          if (isMounted) setUser(parsedUser);
+          
+          try {
+            // Verify the token with the server
+            await verifyAuth();
+            if (isMounted) setIsAuthenticated(true);
+          } catch (verifyError) {
+            console.error('Token verification failed:', verifyError);
+            // Don't log out here, just set auth state to false
+            if (isMounted) {
+              setIsAuthenticated(false);
+              // We keep the user object to prevent flickering
+            }
+          }
+        } else {
+          // No user data found
+          if (isMounted) setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Auth verification failed:', error);
-        setIsAuthenticated(false);
-        setUser(null);
-        // Auto logout if verification fails
-        handleLogout(false);
+        console.error('Auth check failed:', error);
+        if (isMounted) {
+          setIsAuthenticated(false);
+          // Don't auto logout here to prevent infinite redirect loops
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Only run on component mount
 
   // Handle user logout
   const handleLogout = (showMessage = true) => {

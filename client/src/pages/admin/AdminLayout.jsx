@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
     HomeIcon,
     UsersIcon,
@@ -14,23 +15,26 @@ function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
-
-    const [user, setUser] = useState({ firstname: "", lastname: "" });    useEffect(() => {
-        const userData = localStorage.getItem("User");
-        if (userData) {
-            setUser(JSON.parse(userData));
+    const [user, setUser] = useState({ firstname: "", lastname: "" });
+    const { user: authUser, isAuthenticated, logout: authLogout } = useAuth();
+      useEffect(() => {
+        // Only set user data once on initial render or when authUser changes
+        if (authUser) {
+            setUser(authUser);
         } else {
-            // If no user data, redirect to login
-            navigate('/login');
+            const userData = localStorage.getItem("User") || sessionStorage.getItem("User");
+            if (userData) {
+                try {
+                    const parsedUser = JSON.parse(userData);
+                    setUser(parsedUser);
+                } catch (error) {
+                    console.error("Error parsing user data:", error);
+                    // Don't navigate here - let ProtectedRoute handle redirection
+                }
+            }
+            // Don't navigate in this effect - let ProtectedRoute handle redirections
         }
-        
-        // Verify auth status when component mounts
-        import('../../services/userService').then(({ verifyAuth }) => {
-            verifyAuth().catch(() => {
-                navigate('/login');
-            });
-        });
-    }, [navigate]);
+    }, [authUser]);
 
     const stats = {
         totalWorkOrders: 150,
@@ -42,11 +46,11 @@ function AdminLayout() {
         { name: 'User Management', to: '/admin/users', icon: UsersIcon },
         { name: 'Confine Space Work Orders', to: '/admin/workorders', icon: ClipboardDocumentListIcon },
         { name: 'Location Management', to: '/admin/locations', icon: MapPinIcon },
-    ];    const handleLogout = () => {
-        // Use the centralized logout function from userService
-        import('../../services/userService').then(({ logout }) => {
-            logout(navigate);
-        });
+    ];
+    
+    const handleLogout = () => {
+        // Use the logout function from AuthContext
+        authLogout();
     };
 
     const SidebarNavLink = ({ item }) => (
@@ -150,16 +154,15 @@ function AdminLayout() {
             )}
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-                <div className="p-6 mt-16 lg:mt-0">
-                    {location.pathname === '/admin' ? (
+            <main className="flex-1 overflow-y-auto">                <div className="p-6 mt-16 lg:mt-0">
+                    {location.pathname === '/admin' || location.pathname === '/admin/' ? (
                         <div className="space-y-8">
                             {/* Welcome Card */}
                             <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-2xl p-6 shadow-xl">
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <h2 className="text-3xl font-bold">
-                                            Welcome back, {user.firstname} {user.lastname}!
+                                            Welcome back, {user?.firstname || ""} {user?.lastname || ""}!
                                         </h2>
                                         <p className="text-sm mt-1 text-gray-300">
                                             {new Date().toLocaleDateString('en-US', {
@@ -177,7 +180,7 @@ function AdminLayout() {
                                         </div>
                                         <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-inner">
                                             <span className="text-gray-900 font-bold">
-                                                {user.firstname?.[0] || ""}{user.lastname?.[0] || ""}
+                                                {user?.firstname?.[0] || ""}{user?.lastname?.[0] || ""}
                                             </span>
                                         </div>
                                     </div>
