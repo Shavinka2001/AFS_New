@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 
-const LocationSearc          placeholder="Search for a location..."
-          className="flex-grow px-3 py-2 border border-gray-300 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent">ar = ({ onLocationFound }) => {
+const LocationSearchBar = ({ onLocationFound }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [geocoder, setGeocoder] = useState(null);
@@ -122,7 +121,7 @@ const LocationSearc          placeholder="Search for a location..."
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search for a location..."
+          placeholder="Search for a location or start typing for suggestions..."
           className="flex-grow px-3 py-2 border border-gray-300 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
