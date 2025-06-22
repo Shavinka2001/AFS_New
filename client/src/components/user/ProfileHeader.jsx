@@ -40,7 +40,7 @@ const ProfileHeader = ({ user, onProfileUpdate }) => {
                             </span>
                         )}
                     </div>
-                    <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
+                    <label className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
                         <input
                             type="file"
                             className="hidden"

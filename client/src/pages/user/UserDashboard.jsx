@@ -14,9 +14,8 @@ import { updateProfile } from '../../services/userService';
 // Confirm Modal Component
 const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
     if (!isOpen) return null;
-    
-    return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+      return (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
                 <p className="text-gray-700 mb-6">{message}</p>
@@ -235,14 +234,23 @@ function TechnicianDashboard() {
             const errorMessage = error.response?.data?.message || error.message || 'Failed to delete work order';
             toast.error(errorMessage);
         }
-    };
-
+    };    // State to prevent duplicate form submissions
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const handleWorkOrderSubmit = async (formData) => {
+        // Check if already submitting
+        if (isSubmitting) {
+            toast.info("Your request is being processed, please wait...");
+            return;
+        }
 
         try {
+            setIsSubmitting(true); // Prevent multiple submissions
+            
             const user = JSON.parse(localStorage.getItem("User"));
             if (!user || !user.id) {
                 toast.error('User information not found');
+                setIsSubmitting(false);
                 return;
             }
 
@@ -292,18 +300,64 @@ function TechnicianDashboard() {
                     await fetchWorkOrders();
                 }
             } else {
-                response = await createWorkOrder(formattedData);
-                if (response) {
-                    toast.success('Work order created successfully');
-                    setShowWorkOrderModal(false);
-                    setSelectedWorkOrder(null);
-                    await fetchWorkOrders();
+                // Add a retry mechanism for 429 errors
+                let retries = 0;
+                const maxRetries = 3;
+                const retryDelay = 1000; // 1 second delay between retries
+                
+                while (retries < maxRetries) {
+                    try {
+                        response = await createWorkOrder(formattedData);
+                        if (response) {
+                            toast.success('Work order created successfully');
+                            setShowWorkOrderModal(false);
+                            setSelectedWorkOrder(null);
+                            await fetchWorkOrders();
+                            break; // Success, exit the retry loop
+                        }
+                    } catch (retryError) {
+                        if (retryError.response && retryError.response.status === 429 && retries < maxRetries - 1) {
+                            // If we get a 429 error and have retries left, wait and try again
+                            retries++;
+                            toast.info(`Request rate limited. Retrying in ${retryDelay/1000} seconds... (${retries}/${maxRetries})`);
+                            await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        } else {
+                            // If it's not a 429 error or we're out of retries, throw the error to be caught by the outer catch
+                            throw retryError;
+                        }
+                    }
                 }
             }
         } catch (error) {
             console.error('Error saving work order:', error);
-            const errorMessage = error.response?.data?.message || error.message || 'Failed to save work order';
+            let errorMessage = error.message || 'Failed to save work order';
+            
+            // Better error handling for specific error codes
+            if (error.response) {
+                switch (error.response.status) {
+                    case 429:
+                        errorMessage = 'Too many requests. Please wait a moment and try again.';
+                        break;
+                    case 400:
+                        errorMessage = error.response.data?.message || 'Invalid data. Please check your form.';
+                        break;
+                    case 401:
+                        errorMessage = 'Your session has expired. Please login again.';
+                        break;
+                    case 403:
+                        errorMessage = 'You do not have permission to create work orders.';
+                        break;
+                    case 500:
+                        errorMessage = 'Server error. Please try again later.';
+                        break;
+                    default:
+                        errorMessage = error.response.data?.message || errorMessage;
+                }
+            }
+            
             toast.error(errorMessage);
+        } finally {
+            setIsSubmitting(false); // Reset submission state
         }
     };
 
@@ -459,9 +513,8 @@ function TechnicianDashboard() {
                         <span>Logout</span>
                     </button>
                 </div>            </div>              {/* Overlay to close mobile menu when clicking outside */}
-            {mobileMenuOpen && (
-                <div 
-                    className="fixed inset-0 bg-gray-600 bg-opacity-30 backdrop-blur-sm z-30 lg:hidden"
+            {mobileMenuOpen && (                <div 
+                    className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 lg:hidden"
                     onClick={toggleMobileMenu}
                 ></div>
             )}

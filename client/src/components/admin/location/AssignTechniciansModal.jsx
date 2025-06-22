@@ -101,10 +101,9 @@ const AssignTechniciansModal = ({ isOpen, onClose, location, onAssign }) => {
   };
   
   if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+    return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Assign Technicians to {location?.name}</h2>
         
         {fetchingUsers ? (

@@ -297,7 +297,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete }) => {
       {/* Image Preview Modal */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedImage(null)}
         >
           <div className="max-w-4xl w-full mx-4">

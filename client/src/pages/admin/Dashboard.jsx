@@ -146,9 +146,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                     </span>
                   </div>
                   
-                  {order.locationDescription && (
-                    <p className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-100">{order.locationDescription}</p>
-                  )}                  <div className="mt-3 pt-2 border-t border-gray-200 flex justify-end space-x-2">
+                               <div className="mt-3 pt-2 border-t border-gray-200 flex justify-end space-x-2">
                     <button 
                       onClick={() => onViewOrder(order)} 
                       className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
@@ -678,10 +676,9 @@ export default function Dashboard() {
             />
           </div>
         </div>
-        
-        {/* Work Order Modal would be imported from your components */}
+          {/* Work Order Modal would be imported from your components */}
         {showOrderModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4 pb-3 border-b">
                 <h3 className="text-xl font-bold">

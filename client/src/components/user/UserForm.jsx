@@ -49,11 +49,9 @@ const UserForm = ({ user, onSubmit, onClose }) => {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-            <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 animate-slideUp">
+    };    return (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+            <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 animate-slideIn">
                 {/* Decorative Elements */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gray-900 to-gray-800 rounded-t-2xl"></div>
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-4 border-white">

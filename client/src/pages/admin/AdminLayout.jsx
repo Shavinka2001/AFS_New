@@ -109,12 +109,11 @@ function AdminLayout() {
                 <button onClick={() => setSidebarOpen(true)}>
                     <Bars3Icon className="h-6 w-6 text-gray-700" />
                 </button>
-            </header>
-
-            {/* Mobile Sidebar Drawer */}
+            </header>            {/* Mobile Sidebar Drawer */}
             {sidebarOpen && (
                 <div className="fixed inset-0 z-50 flex">
-                    <div className="w-72 bg-white shadow-xl flex flex-col h-full">
+                    <div className="relative z-50 w-72 bg-white shadow-xl flex flex-col h-full">
+                    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
                         <div className="p-6 border-b border-gray-200">
                             <div className="flex justify-between items-center">
                                 <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent">Menu</h2>
@@ -149,7 +148,7 @@ function AdminLayout() {
                             </button>
                         </div>
                     </div>
-                    <div className="flex-1 bg-black bg-opacity-40" onClick={() => setSidebarOpen(false)} />
+                    <div className="flex-1 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
                 </div>
             )}
 
