@@ -11,6 +11,55 @@ import UserForm from '../../components/user/UserForm';
 import LocationMapView from '../../components/user/LocationMapView';
 import { updateProfile } from '../../services/userService';
 
+// Confirm Modal Component
+const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
+    if (!isOpen) return null;
+    
+    return (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+                <p className="text-gray-700 mb-6">{message}</p>
+                <div className="flex space-x-4 justify-end">
+                    <button
+                        onClick={onCancel}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
+                    >
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Clock component to display current time
+const Clock = () => {
+    const [time, setTime] = useState(new Date());
+    
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTime(new Date());
+        }, 1000);
+        
+        return () => {
+            clearInterval(timer);
+        };
+    }, []);
+    
+    return (
+        <div className="font-semibold text-gray-900">
+            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        </div>
+    );
+};
+
 function TechnicianDashboard() {
     const [user, setUser] = useState({ firstname: "", lastname: "", profileImage: "" });
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,7 +72,16 @@ function TechnicianDashboard() {
     const [showUpdateForm, setShowUpdateForm] = useState(false);
     const [assignedLocations, setAssignedLocations] = useState([]);
     const [loadingLocations, setLoadingLocations] = useState(false);
-    const navigate = useNavigate();    useEffect(() => {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navigate = useNavigate();
+    
+    // Toggle mobile menu
+    const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+    
+    useEffect(() => {
+        // Close mobile menu when changing tabs
+        setMobileMenuOpen(false);
+        
         const userData = localStorage.getItem("User") || sessionStorage.getItem("User");
         if (userData) {
             try {
@@ -105,30 +163,52 @@ function TechnicianDashboard() {
             setAssignedLocations([]);
         } finally {
             setLoadingLocations(false);
-        }    };
-      // State to track which location is being closed
+        }    };    // State to track which location is being closed and confirm modal state
     const [closingLocationId, setClosingLocationId] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        locationId: null
+    });
     
     // Handle closing work (detaching technician from location)
-    const handleCloseWork = async (locationId) => {
-        if (window.confirm("Are you sure you want to close this work? This will remove your assignment from this location.")) {
-            try {
-                // Set the specific location as loading
-                setClosingLocationId(locationId);
-                
-                await detachTechnicianFromLocation(locationId);
-                toast.success("Work closed successfully. You have been unassigned from this location.");
-                
-                // Refresh assigned locations to reflect the change
-                await fetchAssignedLocations();
-            } catch (error) {
-                console.error("Error closing work:", error);
-                toast.error(error.message || "Failed to close work. Please try again.");
-            } finally {
-                // Clear the loading state
-                setClosingLocationId(null);
-            }
+    const handleCloseWork = (locationId) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Close Work',
+            message: 'Are you sure you want to close this work? This will remove your assignment from this location.',
+            locationId
+        });
+    };
+    
+    // Handle confirm close work
+    const handleConfirmCloseWork = async () => {
+        const locationId = confirmModal.locationId;
+        
+        try {
+            // Set the specific location as loading
+            setClosingLocationId(locationId);
+            // Close the modal
+            setConfirmModal({ isOpen: false, title: '', message: '', locationId: null });
+            
+            await detachTechnicianFromLocation(locationId);
+            toast.success("Work closed successfully. You have been unassigned from this location.");
+            
+            // Refresh assigned locations to reflect the change
+            await fetchAssignedLocations();
+        } catch (error) {
+            console.error("Error closing work:", error);
+            toast.error(error.message || "Failed to close work. Please try again.");
+        } finally {
+            // Clear the loading state
+            setClosingLocationId(null);
         }
+    };
+    
+    // Handle cancel close work
+    const handleCancelCloseWork = () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', locationId: null });
     };
 
     const handleLogout = () => {
@@ -288,8 +368,24 @@ function TechnicianDashboard() {
         },
     ];    return (
         <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar - Fixed position with modern styling */}
-            <div className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-xl border-r border-gray-100 z-10 overflow-y-auto">
+            {/* Mobile Menu Button - Only visible on small screens */}
+            <button 
+                className="fixed top-4 left-4 p-2 rounded-lg bg-gray-900 text-white shadow-lg lg:hidden z-50"
+                onClick={toggleMobileMenu}
+            >
+                {mobileMenuOpen ? (
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                ) : (
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                )}
+            </button>
+            
+            {/* Sidebar - Fixed position with modern styling - Hidden on mobile unless menu is open */}
+            <div className={`fixed top-0 left-0 bottom-0 w-72 bg-white shadow-xl border-r border-gray-100 z-40 overflow-y-auto transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 {/* Sidebar header with gradient background */}
                 <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6">
                     <div className="flex items-center space-x-4">
@@ -314,11 +410,14 @@ function TechnicianDashboard() {
                 {/* Navigation section with hover effects */}
                 <div className="p-4">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mx-2 mb-2">Main Menu</p>
-                    <nav className="space-y-1">
-                        {navItems.map((item) => (
+                    <nav className="space-y-1">                        {navItems.map((item) => (
                             <button
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => {
+                                    setActiveTab(item.id);
+                                    // Close mobile menu when a nav item is clicked
+                                    setMobileMenuOpen(false);
+                                }}
                                 className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 group relative ${
                                     activeTab === item.id
                                         ? 'bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow-lg'
@@ -352,25 +451,36 @@ function TechnicianDashboard() {
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-3 px-4 py-3.5 text-sm font-medium bg-gradient-to-r from-gray-800 to-gray-700 text-white hover:from-gray-700 hover:to-gray-600 rounded-xl transition-all duration-200 shadow-md"
+                        className="w-full flex items-center justify-center space-x-3 px-4 py-3 sm:py-3.5 text-sm font-medium bg-gradient-to-r from-gray-800 to-gray-700 text-white hover:from-gray-700 hover:to-gray-600 rounded-xl transition-all duration-200 shadow-md"
                     >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>
                     </button>
-                </div>            </div>
+                </div>            </div>              {/* Overlay to close mobile menu when clicking outside */}
+            {mobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-gray-600 bg-opacity-30 backdrop-blur-sm z-30 lg:hidden"
+                    onClick={toggleMobileMenu}
+                ></div>
+            )}
             
-            {/* Main Content - Added margin-left to account for fixed sidebar */}
-            <div className="flex-1 ml-72">
-                {/* Modern Header with search bar */}
-                <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
-                    <div className="px-8 py-4 flex justify-between items-center">
-                        <div>
-                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+            {/* Main Content - Responsive margin-left */}
+            <div className="flex-1 ml-0 lg:ml-72 transition-all duration-300">
+                {/* Modern Header with responsive styling */}                <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
+                    <div className="px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                        <div className="ml-12 pl-2 lg:ml-0 lg:pl-0 flex-1">
+                            <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
                                 Technician Dashboard
                             </h1>
-                            <p className="text-sm text-gray-500 mt-0.5">
+                        </div>
+                        
+                        <div className="flex flex-col items-end">
+                            <div className="text-right">
+                                <Clock />
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5 text-right">
                                 {new Date().toLocaleDateString('en-US', {
                                     weekday: 'long',
                                     year: 'numeric',
@@ -379,21 +489,14 @@ function TechnicianDashboard() {
                                 })}
                             </p>
                         </div>
-                        
-                        <div className="flex items-center space-x-4">
-                          
-                            
-                           
-                        </div>
                     </div>
                 </header>
 
-                {/* Content Area with improved styling */}
-                <main className="p-8 bg-gray-50">
+                {/* Content Area with responsive padding */}
+                <main className="p-4 sm:p-6 lg:p-8 bg-gray-50">
                   {activeTab === 'dashboard' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-900">My Assigned Locations</h2>
+                        <div className="space-y-6">                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Assigned Locations</h2>
                             </div>
 
                             {loadingLocations ? (
@@ -401,18 +504,18 @@ function TechnicianDashboard() {
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                                 </div>
                             ) : assignedLocations.length === 0 ? (
-                                <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 text-center">
+                                    <svg className="mx-auto h-10 sm:h-12 w-10 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                     </svg>
-                                    <p className="mt-4 text-gray-700">No locations have been assigned to you yet. Please contact an administrator to get access to locations.</p>
+                                    <p className="mt-4 text-gray-700 text-sm sm:text-base">No locations have been assigned to you yet. Please contact an administrator to get access to locations.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                     {assignedLocations.map((location) => (                                        <div key={location._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                                            <div className="p-6">
-                                                <h3 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
-                                                    {location.name}
+                                            <div className="p-4 sm:p-6">
+                                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center justify-between flex-wrap gap-2">
+                                                    <span className="truncate">{location.name}</span>
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                                         location.isActive 
                                                             ? 'bg-green-100 text-green-800' 
@@ -453,16 +556,15 @@ function TechnicianDashboard() {
                                                         <h4 className="text-sm font-medium text-gray-900">Description:</h4>
                                                         <p className="text-sm text-gray-700 mt-1">{location.description}</p>
                                                     </div>
-                                                )}
-                                                  <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
+                                                )}                                                  <div className="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200 space-y-2 sm:space-y-3">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedWorkOrder(null);
                                                             setShowWorkOrderModal(true);
                                                         }}
-                                                        className="w-full px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all flex items-center justify-center space-x-2"
+                                                        className="w-full px-3 sm:px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all flex items-center justify-center space-x-2 text-sm sm:text-base"
                                                     >
-                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                                         </svg>
                                                         <span>Create Work Order</span>
@@ -470,7 +572,7 @@ function TechnicianDashboard() {
                                                       <button
                                                         onClick={() => handleCloseWork(location._id)}
                                                         disabled={closingLocationId === location._id}
-                                                        className={`w-full px-4 py-2 border border-red-600 text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2 ${
+                                                        className={`w-full px-3 sm:px-4 py-2 border border-red-600 text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${
                                                             closingLocationId === location._id ? 'opacity-50 cursor-not-allowed' : ''
                                                         }`}
                                                     >
@@ -495,18 +597,16 @@ function TechnicianDashboard() {
                                 </div>
                             )}
                         </div>
-                    )}   
-
-                    {activeTab === 'tasks' && (
+                    )}                    {activeTab === 'tasks' && (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-900">Confine Space Work Orders</h2>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Confine Space Work Orders</h2>
                                 <button
                                     onClick={() => {
                                         setSelectedWorkOrder(null);
                                         setShowWorkOrderModal(true);
                                     }}
-                                    className="px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+                                    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all duration-200 flex items-center justify-center sm:justify-start space-x-2 shadow-lg"
                                 >
                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -533,17 +633,15 @@ function TechnicianDashboard() {
                         </div>
                     )}
 
-                   
-
-                    {activeTab === 'profile' && (
-                        <div className="space-y-6">
+                       {activeTab === 'profile' && (
+                        <div className="space-y-4 sm:space-y-6">
                             <ProfileHeader 
                                 user={user} 
                                 onProfileUpdate={() => setShowUpdateForm(true)} 
                             />
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 space-y-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                                <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                                     <PersonalInformation user={user} />
                                 </div>
                             </div>
@@ -563,9 +661,7 @@ function TechnicianDashboard() {
                     isEdit={!!selectedWorkOrder}
                     assignedLocationData={assignedLocations.length === 1 ? assignedLocations[0] : null}
                 />
-            )}
-
-            {/* Update Profile Form */}
+            )}            {/* Update Profile Form */}
             {showUpdateForm && (
                 <UserForm
                     user={user}
@@ -573,6 +669,15 @@ function TechnicianDashboard() {
                     onClose={() => setShowUpdateForm(false)}
                 />
             )}
+            
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={handleConfirmCloseWork}
+                onCancel={handleCancelCloseWork}
+            />
         </div>
     );
 }
