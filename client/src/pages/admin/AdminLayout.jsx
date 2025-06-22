@@ -38,7 +38,7 @@ function AdminLayout() {
     };
 
     const navigation = [
-        { name: 'Dashboard', to: '/admin', icon: HomeIcon },
+        { name: 'Dashboard', to: '/admin/dashboard', icon: HomeIcon },
         { name: 'User Management', to: '/admin/users', icon: UsersIcon },
         { name: 'Confine Space Work Orders', to: '/admin/workorders', icon: ClipboardDocumentListIcon },
         { name: 'Location Management', to: '/admin/locations', icon: MapPinIcon },

@@ -237,17 +237,39 @@ exports.assignTechnicians = async (req, res) => {
     const previouslyAssignedTechs = [...location.assignedTechnicians];
     const techsToRemove = previouslyAssignedTechs.filter(
       techId => !technicianIds.includes(techId.toString())
-    );
-
+    );    // Check if any of the new technicians are already assigned to another location
+    for (const techId of technicianIds) {
+      // Skip technicians that are already assigned to this location
+      if (previouslyAssignedTechs.includes(techId.toString())) {
+        continue;
+      }
+      
+      const technician = await User.findById(techId);
+      
+      if (technician && technician.assignedLocations && technician.assignedLocations.length > 0) {
+        // Check if the technician is assigned to a different location
+        const otherLocations = technician.assignedLocations.filter(
+          locId => locId.toString() !== locationId
+        );
+        
+        if (otherLocations.length > 0) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            message: `Technician ${technician.firstname} ${technician.lastname} is already assigned to another location. A technician can only be assigned to one location at a time.`
+          });
+        }
+      }
+    }
+    
     // Update the location with the new technicians
     location.assignedTechnicians = technicianIds;
     await location.save();
 
     // Update each technician user by adding this location to their assignedLocations
     for (const techId of technicianIds) {
+      // First remove any existing location assignments
       await User.findByIdAndUpdate(
         techId,
-        { $addToSet: { assignedLocations: locationId } },
+        { $set: { assignedLocations: [locationId] } }, // Replace with just this location
         { new: true }
       );
     }

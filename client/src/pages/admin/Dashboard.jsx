@@ -1,6 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getWorkOrders, deleteWorkOrder, createWorkOrder, updateWorkOrder } from '../../services/workOrderService';
+import { getLocations } from '../../services/locationService';
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // StatCard Component
 const StatCard = ({ name, value, icon, trend }) => {
@@ -84,6 +88,174 @@ const UserTable = ({ users, loading }) => {
   )
 }
 
+// Location Card Component for Dashboard
+const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
+  // No expanded state needed since we want to show all orders by default
+  
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transition-all hover:shadow-xl">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <LocationIcon className="h-5 w-5 text-gray-700" />
+            <h3 className="text-lg font-bold text-gray-900">{location.name}</h3>
+          </div>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            {orders.length} Order{orders.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">{location.address}</p>
+      </div>
+      
+      <div className="p-4">        {orders.length === 0 ? (
+          <div className="text-center py-6">
+            <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+              <ClipboardIcon className="h-6 w-6 text-gray-400" />
+            </div>
+            <p className="text-gray-500">No work orders for this location.</p>
+            {onAddOrder && (
+              <button 
+                onClick={() => onAddOrder(location)}
+                className="mt-4 px-4 py-2 bg-slate-900 text-white text-sm rounded-md hover:bg-slate-800 transition-colors flex items-center mx-auto"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Work Order
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-medium text-gray-500">{orders.length} work order{orders.length !== 1 ? 's' : ''} found</p>
+              
+              {/* Add new work order button for this location */}
+             
+             
+            </div>
+            
+            {/* Always show all orders without limit */}
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {orders.map((order, index) => (
+                <div key={order._id || index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{order.confinedSpaceNameOrId}</p>
+                      <div className="flex items-center mt-1 text-xs text-gray-500">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        <span>{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      order.permitRequired 
+                        ? 'bg-amber-100 text-amber-800 border border-amber-300' 
+                        : 'bg-green-100 text-green-800 border border-green-300'
+                      }`}>
+                      {order.permitRequired ? "Permit Required" : "No Permit"}
+                    </span>
+                  </div>
+                  
+                  {order.locationDescription && (
+                    <p className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-100">{order.locationDescription}</p>
+                  )}                  <div className="mt-3 pt-2 border-t border-gray-200 flex justify-end space-x-2">
+                    <button 
+                      onClick={() => onViewOrder(order)} 
+                      className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
+                      title="View Order"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => downloadSinglePDF(order)}
+                      className="p-1.5 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+                      title="Download PDF"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                    <button 
+                      onClick={() => onDeleteOrder(order._id)} 
+                      className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"
+                      title="Delete Order"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                    <a 
+                      href="/admin/workorders" 
+                      className="p-1.5 rounded text-slate-600 hover:bg-slate-50 transition-colors"
+                      title="Go to Work Order Management"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Dashboard Work Order Grid Component
+const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-80 bg-gray-100 rounded-xl animate-pulse flex flex-col">
+            <div className="h-16 bg-gray-200 rounded-t-xl"></div>
+            <div className="flex-1 p-4 space-y-3">
+              <div className="h-20 bg-gray-200 rounded-lg w-full"></div>
+              <div className="h-20 bg-gray-200 rounded-lg w-full"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  
+  const locationEntries = Object.values(workOrdersByLocation);
+  
+  if (!locationEntries || locationEntries.length === 0) {
+    return (
+      <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+        <div className="mx-auto h-20 w-20 rounded-full bg-white flex items-center justify-center mb-4 shadow-sm">
+          <LocationIcon className="h-10 w-10 text-gray-400" />
+        </div>
+        <p className="text-gray-500 text-lg font-medium">No locations or work orders found.</p>
+        <p className="text-gray-400 text-sm max-w-md mx-auto mt-2">
+          Add locations and work orders to see them displayed here with their associated data.
+        </p>
+      </div>
+    );
+  }
+    return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">      {locationEntries.map((entry) => (        <LocationCard 
+          key={entry.location._id} 
+          location={entry.location} 
+          orders={entry.orders}
+          onViewOrder={onViewOrder}
+          onEditOrder={onEditOrder}
+          onAddOrder={onAddOrder}
+          onDeleteOrder={onDeleteOrder}
+          downloadSinglePDF={downloadSinglePDF}
+        />
+      ))}
+    </div>
+  );
+}
+
 // Icons as SVG components
 const UsersIcon = ({ className = "w-6 h-6" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,30 +301,145 @@ const ClockIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 )
 
+// Add WorkOrder Icon
+const WorkOrderIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+    />
+  </svg>
+)
+
+// Location Icon
+const LocationIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" 
+    />
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
+    />
+  </svg>
+)
+
 // Main Dashboard Component
 export default function Dashboard() {
-  const [stats, setStats] = useState([
-    {
-      name: "Total Users",
-      value: 0,
-      icon: <UsersIcon className="text-white w-6 h-6" />,
-      trend: "+12% from last month",
-    },
-    {
+  const [stats, setStats] = useState([    {
       name: "Confined Orders",
       value: 0,
       icon: <ClipboardIcon className="text-white w-6 h-6" />,
-      trend: "+8% from last month",
+      trend: "orders",
     },
   ])
-
   const [users, setUsers] = useState([])
+  const [workOrders, setWorkOrders] = useState([])
+  const [locations, setLocations] = useState([])
+  const [workOrdersByLocation, setWorkOrdersByLocation] = useState({})
   const [loading, setLoading] = useState(true)
+  const [orderLoading, setOrderLoading] = useState(true)
+  const [locationLoading, setLocationLoading] = useState(true)
   const [admin, setAdmin] = useState({
     firstname: "Admin",
     lastname: "",
     userType: "admin",
   })
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [currentOrder, setCurrentOrder] = useState(null)
+  const [isEdit, setIsEdit] = useState(false)
+  const [isView, setIsView] = useState(false)
+  // Define fetchData function outside useEffect to make it reusable
+  const fetchData = async () => {
+    setLoading(true)
+    const token = localStorage.getItem("token")
+    try {
+      // Fetch users
+      const res = await fetch("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      const userArray = Array.isArray(data) ? data : []
+      setUsers(userArray)
+      
+      // Fetch work orders
+      setOrderLoading(true)
+      const orders = await getWorkOrders()
+      const orderList = Array.isArray(orders) ? orders : []
+      setWorkOrders(orderList)
+      setOrderLoading(false)
+      
+      // Fetch locations
+      setLocationLoading(true)
+      try {
+        const locationData = await getLocations()
+        const locationList = (locationData?.locations || locationData?.data || [])
+        setLocations(locationList)
+        
+        // Group work orders by location
+        const ordersByLocation = {}
+        
+        // First, create entries for all locations, even those without orders
+        locationList.forEach(location => {
+          ordersByLocation[location._id] = {
+            location,
+            orders: []
+          }
+        })
+        
+        // Then add orders to their respective locations
+        orderList.forEach(order => {
+          // Try to match order to location by name or address
+          const matchedLocation = locationList.find(location => 
+            location.name === order.confinedSpaceNameOrId ||
+            location.name === order.building ||
+            location.address === order.building
+          )
+          
+          if (matchedLocation) {
+            // If we found a match, add to that location
+            ordersByLocation[matchedLocation._id].orders.push(order)
+          } else {
+            // If no match, create a "Unknown Location" category
+            if (!ordersByLocation['unknown']) {
+              ordersByLocation['unknown'] = {
+                location: { 
+                  _id: 'unknown',
+                  name: 'Other Locations', 
+                  address: 'Unspecified location' 
+                },
+                orders: []
+              }
+            }
+            ordersByLocation['unknown'].orders.push(order)
+          }
+        })
+        
+        setWorkOrdersByLocation(ordersByLocation)
+      } catch (error) {
+        console.error("Error fetching locations:", error)
+      }
+      setLocationLoading(false)
+      
+      // Update stats
+      setStats((prev) => [
+        { ...prev[0], value: orderList.length },
+      ])
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      setUsers([])
+      setWorkOrders([])
+      setOrderLoading(false)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
     // Get admin info from localStorage (set this on login)
@@ -165,26 +452,6 @@ export default function Dashboard() {
       }
     }
 
-    const fetchData = async () => {
-      setLoading(true)
-      const token = localStorage.getItem("token")
-      try {
-        const res = await fetch("http://localhost:5000/api/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await res.json()
-        setUsers(Array.isArray(data) ? data : [])
-        setStats((prev) => [
-          { ...prev[0], value: Array.isArray(data) ? data.length : 0 },
-          { ...prev[1], value: 0 }, // Set confined orders value here if you have it
-        ])
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        setUsers([])
-      }
-      setLoading(false)
-    }
-
     fetchData()
   }, [])
 
@@ -194,11 +461,148 @@ export default function Dashboard() {
     month: "long",
     day: "numeric",
   })
-
   const currentTime = new Date().toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   })
+
+  // Handler functions for work orders
+  const handleViewOrder = (order) => {
+    setCurrentOrder(order)
+    setIsView(true)
+    setIsEdit(false)
+    setShowOrderModal(true)
+  }
+
+  const handleEditOrder = (order) => {
+    setCurrentOrder(order)
+    setIsView(false)
+    setIsEdit(true)
+    setShowOrderModal(true)
+  }
+    const handleDeleteOrder = async (orderId) => {
+    if (window.confirm("Are you sure you want to delete this work order? This action cannot be undone.")) {
+      try {
+        // Use the imported deleteWorkOrder service function instead of direct fetch
+        await deleteWorkOrder(orderId);
+        
+        // Remove the order from the local state
+        const updatedOrders = workOrders.filter(order => order._id !== orderId);
+        setWorkOrders(updatedOrders);
+        
+        // Update the work orders by location
+        const updatedWorkOrdersByLocation = {...workOrdersByLocation};
+        
+        Object.keys(updatedWorkOrdersByLocation).forEach(locationId => {
+          updatedWorkOrdersByLocation[locationId].orders = 
+            updatedWorkOrdersByLocation[locationId].orders.filter(order => order._id !== orderId);
+        });
+        
+        setWorkOrdersByLocation(updatedWorkOrdersByLocation);
+        
+        // Update stats
+        setStats(prev => [
+          { ...prev[0], value: updatedOrders.length },
+        ]);
+        
+        // Show success message
+        alert("Work order deleted successfully");
+      } catch (error) {
+        console.error("Error deleting work order:", error);
+        alert("Error deleting work order: " + (error.message || "Failed to delete work order"));
+      }
+    }
+  }
+
+  const handleAddWorkOrder = (location) => {
+    // If a location is provided, pre-fill the order with that location's info
+    setCurrentOrder(location ? {
+      building: location.name,
+      confinedSpaceNameOrId: '',
+      locationDescription: '',
+      
+      dateOfSurvey: new Date().toISOString().split('T')[0],
+      permitRequired: false,
+      // Add other default fields as needed
+    } : null)
+    setIsView(false)
+    setIsEdit(false)
+    setShowOrderModal(true)
+  }
+
+  const handleOrderModalClose = () => {
+    setShowOrderModal(false)
+    setCurrentOrder(null)
+  }
+
+  const downloadSinglePDF = (order) => {
+    try {
+      const doc = new jsPDF();
+      
+      // Add company header
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text("CONFINED SPACE ASSESSMENT", 105, 15, { align: "center" });
+      
+      // Add form header
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("Form No: CS-" + order._id?.slice(-6) || 'N/A', 14, 25);
+      doc.text("Date: " + order.dateOfSurvey?.slice(0, 10) || 'N/A', 14, 30);
+      doc.text("Surveyors: " + order.surveyors?.join(", ") || 'N/A', 14, 35);
+
+      // Add sections using autoTable - location information
+      const locationInfo = [
+        ['Space Name/ID:', order.confinedSpaceNameOrId || 'N/A'],
+        ['Building:', order.building || 'N/A'],
+        ['Location Description:', order.locationDescription || 'N/A']
+      ];
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("1. LOCATION INFORMATION", 14, 50);
+      
+      autoTable(doc, {
+        body: locationInfo,
+        startY: 55,
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' },
+          1: { cellWidth: 130 }
+        },
+        theme: 'grid'
+      });
+      
+      // Add more sections with hazard data, classifications etc.
+      // Save the PDF
+      doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+    const handleOrderSubmit = async (formData) => {
+    try {
+      // Use the imported service functions
+      if (isEdit) {
+        await updateWorkOrder(currentOrder._id, formData);
+      } else {
+        await createWorkOrder(formData);
+      }
+      
+      // Show success message
+      alert(`Work order ${isEdit ? 'updated' : 'added'} successfully`);
+      
+      // Refresh data to update the UI
+      await fetchData();
+      
+      // Close the modal
+      setShowOrderModal(false);
+    } catch (error) {
+      console.error("Error saving work order:", error);
+      alert("Error saving work order: " + error.message);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -233,44 +637,105 @@ export default function Dashboard() {
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white text-slate-900">
                   {admin.userType === "admin" ? "Administrator" : "User"}
                 </span>
+              </div>            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {stats.map((stat, index) => (
+            <StatCard
+              key={index}
+              name={stat.name}
+              value={stat.value}
+              icon={stat.icon}
+              trend={stat.trend}
+            />
+          ))}
+          <StatCard
+            name="Total Locations"
+            value={locations.length}
+            icon={<LocationIcon className="text-white w-6 h-6" />}
+            trend="With work orders"
+          />
+        </div>        {/* Work Orders by Location Section */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 rounded-t-xl">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                <WorkOrderIcon className="h-5 w-5" />
+                <span>Work Orders by Location</span>
+              </h2>
+                <div className="flex items-center space-x-3">
+                
+                
+                <a href="/admin/workorders" className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center bg-white px-3 py-2 rounded-md border border-blue-100 hover:border-blue-200 shadow-sm hover:shadow transition-all">
+                  View All
+                  <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>          <div className="p-6">            <WorkOrderLocationGrid 
+              workOrdersByLocation={workOrdersByLocation} 
+              loading={orderLoading || locationLoading}
+              onViewOrder={handleViewOrder}
+              onEditOrder={handleEditOrder} 
+              onAddOrder={handleAddWorkOrder}
+              onDeleteOrder={handleDeleteOrder}
+              downloadSinglePDF={downloadSinglePDF}
+            />
+          </div>
+        </div>
+        
+        {/* Work Order Modal would be imported from your components */}
+        {showOrderModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b">
+                <h3 className="text-xl font-bold">
+                  {isView ? "View Work Order" : isEdit ? "Edit Work Order" : "Add Work Order"}
+                </h3>
+                <button 
+                  onClick={handleOrderModalClose}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* This is where you would place your actual WorkOrderModal component */}
+              <div className="mt-4 text-center text-gray-600">                {isView ? (
+                  <div className="text-left">
+                    <p className="mb-3"><strong>Name/ID:</strong> {currentOrder?.confinedSpaceNameOrId}</p>
+                    <p className="mb-3"><strong>Date:</strong> {currentOrder?.dateOfSurvey?.slice(0, 10)}</p>
+                    <p className="mb-3"><strong>Location:</strong> {currentOrder?.building}</p>
+                    <p className="mb-3"><strong>Permit Required:</strong> {currentOrder?.permitRequired ? "Yes" : "No"}</p>
+                    <p className="mb-3"><strong>Description:</strong> {currentOrder?.locationDescription || "N/A"}</p>
+                    <p className="mb-3"><strong>Created By:</strong> {currentOrder?.surveyors?.join(", ") || currentOrder?.createdBy || "N/A"}</p>
+                    {/* Add more fields as needed */}
+                    
+                    <div className="mt-6 flex justify-end">
+                      <button 
+                        onClick={handleOrderModalClose} 
+                        className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p>Import your WorkOrderModal form component here for creating/editing work orders.</p>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat) => (
-            <StatCard key={stat.name} {...stat} />
-          ))}
-
-          {/* Additional stat cards */}
-          <StatCard
-            name="Active Sessions"
-            value={24}
-            icon={<UsersIcon className="text-white w-6 h-6" />}
-            trend="+5% from yesterday"
-          />
-          <StatCard
-            name="System Health"
-            value={99}
-            icon={<ClipboardIcon className="text-white w-6 h-6" />}
-            trend="All systems operational"
-          />
-        </div>
-
-        {/* User Management Section */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 rounded-t-xl">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-              <UsersIcon className="h-5 w-5" />
-              <span>User Management</span>
-            </h2>
-          </div>
-          <div className="p-6">
-            <UserTable users={users} loading={loading} />
-          </div>
-        </div>
+        
       </div>
     </div>
   )

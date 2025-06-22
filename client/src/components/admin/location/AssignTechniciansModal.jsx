@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { assignTechnicians } from '../../../services/locationService';
+import { assignTechnicians, getLocations } from '../../../services/locationService';
 import { getTechnicians } from '../../../services/userService';
 
 const AssignTechniciansModal = ({ isOpen, onClose, location, onAssign }) => {
@@ -8,11 +8,13 @@ const AssignTechniciansModal = ({ isOpen, onClose, location, onAssign }) => {
   const [selectedTechnicianIds, setSelectedTechnicianIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(true);
+  const [assignedTechniciansMap, setAssignedTechniciansMap] = useState({});
+  const [error, setError] = useState('');
   
   // Fetch technicians (users with user role) when modal opens
   useEffect(() => {
     if (isOpen) {
-      fetchTechnicians();
+      fetchTechniciansAndAssignments();
       
       // Set initial selected technicians if location has any
       if (location && location.assignedTechnicians) {
@@ -25,20 +27,53 @@ const AssignTechniciansModal = ({ isOpen, onClose, location, onAssign }) => {
       }
     }
   }, [isOpen, location]);
-  const fetchTechnicians = async () => {
+  
+  // Fetch all technicians and their current location assignments
+  const fetchTechniciansAndAssignments = async () => {
     setFetchingUsers(true);
+    setError('');
     try {
-      const technicianUsers = await getTechnicians();
+      const [technicianUsers, locationsData] = await Promise.all([
+        getTechnicians(),
+        getLocations()
+      ]);
+      
       setTechnicians(technicianUsers);
+      
+      // Create a map of technician ID to their assigned location
+      const technicianAssignmentMap = {};
+      const locations = locationsData?.locations || locationsData?.data || [];
+      
+      locations.forEach(loc => {
+        if (loc.assignedTechnicians && Array.isArray(loc.assignedTechnicians)) {
+          loc.assignedTechnicians.forEach(techId => {
+            // Don't record assignments to the current location (so we can toggle them)
+            if (location && loc._id !== location._id) {
+              const technicianId = typeof techId === 'object' ? techId._id : techId;
+              technicianAssignmentMap[technicianId] = loc;
+            }
+          });
+        }
+      });
+      
+      setAssignedTechniciansMap(technicianAssignmentMap);
     } catch (error) {
-      console.error('Error fetching technicians:', error);
-      toast.error('Failed to load technicians');
+      console.error('Error fetching data:', error);
+      setError('Failed to load technicians and assignments');
+      toast.error('Failed to load technician data');
     } finally {
       setFetchingUsers(false);
     }
   };
   
   const handleToggleTechnician = (techId) => {
+    // Check if technician is already assigned to another location
+    if (!selectedTechnicianIds.includes(techId) && assignedTechniciansMap[techId]) {
+      const assignedLocation = assignedTechniciansMap[techId];
+      toast.warning(`This technician is already assigned to location: ${assignedLocation.name}`);
+      return;
+    }
+    
     setSelectedTechnicianIds(prev => {
       if (prev.includes(techId)) {
         return prev.filter(id => id !== techId);
@@ -81,26 +116,42 @@ const AssignTechniciansModal = ({ isOpen, onClose, location, onAssign }) => {
             <div className="mb-4">
               <label className="block text-gray-700 font-medium mb-2">
                 Select Technicians:
-              </label>
+              </label>                {error && (
+                  <div className="text-red-500 mb-2">{error}</div>
+                )}
               
-              {technicians.length === 0 ? (
+                {technicians.length === 0 ? (
                 <p className="text-gray-500">No technicians available.</p>
               ) : (
                 <div className="max-h-60 overflow-y-auto border rounded p-2">
-                  {technicians.map(tech => (
-                    <div key={tech._id} className="flex items-center mb-2 p-1 hover:bg-gray-100">
-                      <input
-                        type="checkbox"
-                        id={`tech-${tech._id}`}
-                        checked={selectedTechnicianIds.includes(tech._id)}
-                        onChange={() => handleToggleTechnician(tech._id)}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`tech-${tech._id}`} className="cursor-pointer flex-1">
-                        {tech.firstname} {tech.lastname} ({tech.email})
-                      </label>
-                    </div>
-                  ))}
+                  {technicians.map(tech => {
+                    const isAssignedElsewhere = assignedTechniciansMap[tech._id];
+                    return (
+                      <div 
+                        key={tech._id} 
+                        className={`flex items-center mb-2 p-1 ${
+                          isAssignedElsewhere ? 'bg-gray-50 opacity-70' : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          id={`tech-${tech._id}`}
+                          checked={selectedTechnicianIds.includes(tech._id)}
+                          onChange={() => handleToggleTechnician(tech._id)}
+                          className="mr-2"
+                          disabled={isAssignedElsewhere}
+                        />
+                        <label htmlFor={`tech-${tech._id}`} className="cursor-pointer flex-1">
+                          {tech.firstname} {tech.lastname} ({tech.email})
+                          {isAssignedElsewhere && (
+                            <span className="ml-2 text-xs text-blue-600 italic">
+                              Assigned to: {assignedTechniciansMap[tech._id].name}
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

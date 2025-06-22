@@ -130,9 +130,9 @@ const LocationManagement = () => {
         </div>
         
         <div id="location-map" className="order-1 lg:order-2">
-          <div className="bg-white shadow rounded-lg p-4">
+          <div className="bg-white shadow rounded-lg p-4 ">
             <h2 className="text-xl font-semibold mb-4">Map View</h2>
-            <div className="h-[400px] w-full">
+            <div className="h-[500px] w-full">
               <LocationMap 
                 locations={locations}
                 center={mapCenter}
@@ -145,10 +145,7 @@ const LocationManagement = () => {
         </div>
       </div>
       
-      {/* Assigned Locations Section for Technician Management */}
-      <div className="mt-8">
-        <AssignedLocations isAdmin={true} />
-      </div>
+      
       
       {showModal && (
         <LocationModal 
