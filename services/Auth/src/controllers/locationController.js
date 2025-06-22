@@ -1,4 +1,6 @@
 const Location = require('../model/Location');
+const User = require('../model/User');
+const { StatusCodes } = require('http-status-codes');
 
 // Create a new location
 exports.createLocation = async (req, res) => {
@@ -208,45 +210,66 @@ exports.toggleLocationStatus = async (req, res) => {
 // Assign technicians to a location
 exports.assignTechnicians = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { locationId } = req.params;
     const { technicianIds } = req.body;
-    
-    // Validate input
+
+    if (!locationId) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ 
+        message: 'Location ID is required' 
+      });
+    }
+
     if (!technicianIds || !Array.isArray(technicianIds)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid input. technicianIds must be an array' 
+      return res.status(StatusCodes.BAD_REQUEST).json({ 
+        message: 'Technician IDs array is required' 
       });
     }
-    
+
     // Find the location
-    const location = await Location.findById(id);
+    const location = await Location.findById(locationId);
     if (!location) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Location not found' 
+      return res.status(StatusCodes.NOT_FOUND).json({ 
+        message: `Location with ID ${locationId} not found` 
       });
     }
-    
-    // Update location with assigned technicians
+
+    // Get currently assigned technicians to identify which ones to remove
+    const previouslyAssignedTechs = [...location.assignedTechnicians];
+    const techsToRemove = previouslyAssignedTechs.filter(
+      techId => !technicianIds.includes(techId.toString())
+    );
+
+    // Update the location with the new technicians
     location.assignedTechnicians = technicianIds;
     await location.save();
-    
-    // Return updated location with populated technician details
-    const updatedLocation = await Location.findById(id)
-      .populate('createdBy', 'firstname lastname email')
-      .populate('assignedTechnicians', 'firstname lastname email');
-    
-    res.json({
-      success: true,
+
+    // Update each technician user by adding this location to their assignedLocations
+    for (const techId of technicianIds) {
+      await User.findByIdAndUpdate(
+        techId,
+        { $addToSet: { assignedLocations: locationId } },
+        { new: true }
+      );
+    }
+
+    // For technicians who were removed, update their assignedLocations as well
+    for (const techId of techsToRemove) {
+      await User.findByIdAndUpdate(
+        techId,
+        { $pull: { assignedLocations: locationId } },
+        { new: true }
+      );
+    }
+
+    res.status(StatusCodes.OK).json({
       message: 'Technicians assigned successfully',
-      location: updatedLocation
+      location
     });
-  } catch (err) {
-    console.error('Error assigning technicians:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: err.message || 'Error assigning technicians' 
+  } catch (error) {
+    console.error('Error in assignTechnicians:', error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Error assigning technicians', 
+      error: error.message
     });
   }
 };

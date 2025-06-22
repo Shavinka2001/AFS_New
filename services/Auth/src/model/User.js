@@ -40,7 +40,11 @@ isAdmin: {
 isActive: {
   type: Boolean,
   default: true
-}
+},
+assignedLocations: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Location'
+}]
 
 }, {
     timestamps: true

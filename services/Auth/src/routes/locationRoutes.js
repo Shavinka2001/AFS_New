@@ -17,6 +17,6 @@ router.post('/', isAdmin, locationController.createLocation);
 router.put('/:id', isAdmin, locationController.updateLocation);
 router.delete('/:id', isAdmin, locationController.deleteLocation);
 router.patch('/:id/toggle-status', isAdmin, locationController.toggleLocationStatus);
-router.post('/:id/assign-technicians', isAdmin, locationController.assignTechnicians); // New route
+router.post('/:locationId/assign-technicians', isAdmin, locationController.assignTechnicians); // New route
 
 module.exports = router;

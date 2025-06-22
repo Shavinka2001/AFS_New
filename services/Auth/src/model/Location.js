@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const LocationSchema = new mongoose.Schema({
-  name: { 
+  name: {
     type: String,
     required: true,
     trim: true
@@ -16,26 +16,25 @@ const LocationSchema = new mongoose.Schema({
   },
   address: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   description: {
     type: String,
-    trim: true
+    default: ''
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  assignedTechnicians: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  assignedTechnicians: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });
