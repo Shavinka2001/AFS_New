@@ -113,17 +113,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
               <ClipboardIcon className="h-6 w-6 text-gray-400" />
             </div>
             <p className="text-gray-500">No work orders for this location.</p>
-            {onAddOrder && (
-              <button 
-                onClick={() => onAddOrder(location)}
-                className="mt-4 px-4 py-2 bg-slate-900 text-white text-sm rounded-md hover:bg-slate-800 transition-colors flex items-center mx-auto"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Add Work Order
-              </button>
-            )}
+           
           </div>
         ) : (
           <div className="space-y-3">

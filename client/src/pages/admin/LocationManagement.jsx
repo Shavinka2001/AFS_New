@@ -109,7 +109,7 @@ const LocationManagement = () => {
         <h1 className="text-2xl font-bold">Location Management</h1>
         <button 
           onClick={handleAddLocation}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+          className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
         >
           Add New Location
         </button>

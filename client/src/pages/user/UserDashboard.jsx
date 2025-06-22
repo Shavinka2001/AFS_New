@@ -268,75 +268,128 @@ function TechnicianDashboard() {
             setLoading(false);
         }
     };    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-        { id: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-        { id: 'tasks', label: 'Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-        { id: 'reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-        { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
-    ];
-
-    return (
+        { 
+            id: 'dashboard', 
+            label: 'Dashboard', 
+            icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+            description: 'Your workspace overview and assigned locations'
+        },
+        { 
+            id: 'profile', 
+            label: 'Profile', 
+            icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+            description: 'Manage your personal information' 
+        },
+        { 
+            id: 'tasks', 
+            label: 'Tasks', 
+            icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+            description: 'Manage your confined space work orders'
+        },
+    ];    return (
         <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <div className="w-64 bg-white shadow-xl border-r border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-gray-900 to-gray-800 flex items-center justify-center">
-                            <span className="text-white font-semibold text-lg">
+            {/* Sidebar - Fixed position with modern styling */}
+            <div className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-xl border-r border-gray-100 z-10 overflow-y-auto">
+                {/* Sidebar header with gradient background */}
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6">
+                    <div className="flex items-center space-x-4">
+                        <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border-2 border-white/30">
+                            <span className="text-white font-bold text-xl">
                                 {user.firstname?.[0] || "T"}
                                 {user.lastname?.[0] || ""}
                             </span>
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="text-base font-bold text-white">
                                 {user.firstname} {user.lastname}
                             </p>
-                            <p className="text-xs text-gray-700">Technician</p>
+                            <div className="mt-1 flex items-center">
+                                <span className="inline-flex h-2 w-2 rounded-full bg-green-400 mr-2"></span>
+                                <p className="text-xs font-medium text-gray-200">Technician</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <nav className="mt-4">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-                                activeTab === item.id
-                                    ? 'bg-gray-50 text-gray-900'
-                                    : 'text-gray-700 hover:bg-gray-50'
-                            }`}
-                        >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
-                            </svg>
-                            <span>{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-                <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200">
+                
+                {/* Navigation section with hover effects */}
+                <div className="p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mx-2 mb-2">Main Menu</p>
+                    <nav className="space-y-1">
+                        {navItems.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+                                    activeTab === item.id
+                                        ? 'bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow-lg'
+                                        : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                            >
+                                <div className={`flex items-center ${activeTab === item.id ? 'text-white' : ''}`}>
+                                    <div className={`mr-3 p-1.5 rounded-lg ${activeTab === item.id ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-gray-200'}`}>
+                                        <svg className={`h-5 w-5 transition-colors ${activeTab === item.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} 
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">{item.label}</span>
+                                        <p className={`text-xs mt-0.5 transition-colors ${activeTab === item.id ? 'text-gray-200' : 'text-gray-500'}`}>
+                                            {item.description}
+                                        </p>
+                                    </div>
+                                </div>
+                                {activeTab === item.id && (
+                                    <div className="absolute right-2">
+                                        <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                )}                            </button>
+                        ))}
+                    </nav>
+                </div>                {/* Logout button at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
+                        className="w-full flex items-center justify-center space-x-3 px-4 py-3.5 text-sm font-medium bg-gradient-to-r from-gray-800 to-gray-700 text-white hover:from-gray-700 hover:to-gray-600 rounded-xl transition-all duration-200 shadow-md"
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>
                     </button>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1">
-                {/* Header */}
-                <header className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="px-6 py-4">
-                        <h1 className="text-2xl font-bold text-gray-900">Technician Dashboard</h1>
+                </div>            </div>
+            
+            {/* Main Content - Added margin-left to account for fixed sidebar */}
+            <div className="flex-1 ml-72">
+                {/* Modern Header with search bar */}
+                <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
+                    <div className="px-8 py-4 flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                                Technician Dashboard
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                                {new Date().toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </p>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          
+                            
+                           
+                        </div>
                     </div>
                 </header>
 
-                {/* Content Area */}
-              <main className="p-6">
+                {/* Content Area with improved styling */}
+                <main className="p-8 bg-gray-50">
                   {activeTab === 'dashboard' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center">
