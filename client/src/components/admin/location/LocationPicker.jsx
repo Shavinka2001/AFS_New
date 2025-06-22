@@ -81,7 +81,7 @@ const LocationPicker = ({ onLocationSelected, initialLocation = null }) => {
       </div>
     );
   }  return (
-    <div className="h-72 w-full rounded-xl overflow-hidden shadow-lg border border-gray-200 mb-4">
+    <div className="h-48 sm:h-60 md:h-72 w-full rounded-xl overflow-hidden shadow-lg border border-gray-200 mb-4">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
         center={markerPosition || defaultMapCenter}

@@ -64,9 +64,8 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
   };
 
   if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-4 sm:p-5 lg:p-6 w-full max-w-2xl mx-auto my-8 shadow-2xl transform transition-all animate-slideIn border border-gray-100">
+  return (    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 animate-fadeIn overflow-y-auto pt-4 px-2 pb-10">
+      <div className="bg-white rounded-2xl p-3 sm:p-5 lg:p-6 w-full max-w-2xl mx-auto mt-12 sm:mt-16 md:mt-10 shadow-2xl transform transition-all animate-slideIn border border-gray-100 max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
             {location ? 'Edit Location' : 'Add New Location'}
@@ -80,7 +79,8 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
             </svg>
           </button>        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Location Name*
@@ -157,7 +157,7 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
             </div>
           </div>          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search for a Location or Select on Map*
+              Search or Click on Map*
             </label>
             <LocationSearchBar 
               onLocationFound={(coords) => {
@@ -188,13 +188,12 @@ const LocationModal = ({ isOpen, onClose, onSubmit, location, isEdit, mapRef }) 
               <p className="mt-2 text-sm text-gray-600">
                 Selected coordinates: {Number(formData.latitude).toFixed(6)}, {Number(formData.longitude).toFixed(6)}
               </p>
-            )}
-            <p className="mt-2 text-sm text-gray-600">
-              {formData.address || 'No address selected yet. Search for a location or click on the map to select.'}
+            )}            <p className="mt-1 text-xs sm:text-sm text-gray-600">
+              {formData.address || 'No address selected yet. Search above or click on the map.'}
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3 mt-2">
+          <div className="flex justify-end space-x-3 mt-1">
             <button
               type="button"
               onClick={onClose}
