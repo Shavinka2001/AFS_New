@@ -134,8 +134,42 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       setFormData(processedOrder);
       setPreviewImages(order.images || []);
     }
+    
+    if (order) {
+      // Ensure all boolean fields are properly initialized
+      const booleanFields = [
+        'confinedSpace',
+        'permitRequired',
+        'atmosphericHazard',
+        'engulfmentHazard',
+        'configurationHazard',
+        'otherRecognizedHazards',
+        'ppeRequired',
+        'forcedAirVentilationSufficient',
+        'dedicatedContinuousAirMonitor',
+        'warningSignPosted',
+        'otherPeopleWorkingNearSpace',
+        'canOthersSeeIntoSpace',
+        'contractorsEnterSpace'
+      ];
+
+      const processedOrder = {
+        ...order,
+        dateOfSurvey: order.dateOfSurvey?.slice(0, 10) || "",
+        surveyors: Array.isArray(order.surveyors) ? order.surveyors : [],
+        technician: technicianName, // Add the technician name
+        images: order.images || []
+      };
+
+      // Ensure boolean fields are properly set
+      booleanFields.forEach(field => {
+        processedOrder[field] = Boolean(processedOrder[field]);
+      });
+
+      setFormData(processedOrder);
+      setPreviewImages(order.images || []);
+    }
   }, [order]);
-  
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     
@@ -178,138 +212,28 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       }));
     }
   };
-  
-  // Handles compressing and resizing images before upload
-  const compressImage = (file) => {
-    return new Promise((resolve, reject) => {
-      // Maximum width and height for the compressed image
-      const maxWidth = 1600;
-      const maxHeight = 1200;
-      const quality = 0.8; // Image quality (0.0 to 1.0)
-      
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        
-        img.onload = () => {
-          // Create a canvas to draw the resized image
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Calculate new dimensions while maintaining aspect ratio
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Get the compressed image as data URL
-          const dataUrl = canvas.toDataURL(file.type, quality);
-          resolve(dataUrl);
+
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newPreviewImages = [];
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newPreviewImages.push(reader.result);
+          setPreviewImages([...previewImages, ...newPreviewImages]);
+          setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, reader.result]
+          }));
         };
-        
-        img.onerror = (error) => {
-          reject(error);
-        };
-      };
-      
-      reader.onerror = (error) => {
-        reject(error);
-      };
+        reader.readAsDataURL(file);
+      } else {
+        toast.error('Please upload only image files');
+      }
     });
   };
-  
-  const handleImageUpload = async (e) => {
-    try {
-      const files = Array.from(e.target.files);
-      
-      if (files.length === 0) return;
-      
-      // Show loading toast for large uploads
-      let loadingToast = null;
-      if (files.length > 2) {
-        loadingToast = toast.info(`Processing ${files.length} images...`, { autoClose: false });
-      }
-      
-      // Validate file types
-      const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-      if (invalidFiles.length > 0) {
-        toast.error('Please upload only image files');
-        return;
-      }
-      
-      // Check file sizes (warn if any file is larger than 5MB)
-      const largeFiles = files.filter(file => file.size > 5 * 1024 * 1024);
-      if (largeFiles.length > 0) {
-        toast.warning(`${largeFiles.length} images are large and will be compressed for better performance.`);
-      }
-      
-      // Process all files with compression
-      const processedImages = await Promise.all(
-        files.map(async (file) => {
-          try {
-            // Compress if file is larger than 1MB
-            if (file.size > 1024 * 1024) {
-              return await compressImage(file);
-            } else {
-              // For smaller files, just read as data URL
-              return await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(file);
-              });
-            }
-          } catch (err) {
-            console.error("Error processing image:", err);
-            return null;
-          }
-        })
-      );
-      
-      // Filter out any failed images
-      const validImages = processedImages.filter(img => img !== null);
-      
-      if (validImages.length === 0) {
-        toast.error('Failed to process images. Please try again.');
-        return;
-      }
-      
-      // Update state with all valid images
-      setPreviewImages(prev => [...prev, ...validImages]);
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...validImages]
-      }));
-      
-      // Close loading toast if it was shown
-      if (loadingToast) {
-        toast.dismiss(loadingToast);
-      }
-      
-      // Success message
-      toast.success(`${validImages.length} image${validImages.length !== 1 ? 's' : ''} added successfully`);
-      
-    } catch (error) {
-      console.error("Error in image upload:", error);
-      toast.error('Failed to upload images. Please try again.');
-    }
-  };
-  
   const removeImage = (index) => {
     const newPreviewImages = previewImages.filter((_, i) => i !== index);
     const newImages = formData.images.filter((_, i) => i !== index);
@@ -319,303 +243,65 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       images: newImages
     }));
   };
-  
+
   // Camera functions
   const startCamera = async () => {
     try {
-      // Check if the browser supports mediaDevices API
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error("Your browser doesn't support camera access. Please try uploading images instead.");
-        return;
-      }
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }, // 'environment' for back camera (if available)
+        audio: false
+      });
       
-      // Check if a camera is already active - if yes, stop it first to avoid conflicts
-      if (stream) {
-        stopCamera();
-      }
-
-      // Reset video element to avoid cached issues
+      setStream(mediaStream);
+      setShowCamera(true);
+      
+      // Once camera is opened
       if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        videoRef.current.onloadedmetadata = null;
-        videoRef.current.onloadeddata = null;
-      }
-      
-      // Display status message to indicate camera is being accessed
-      const loadingToast = toast.info("Accessing camera...", { autoClose: false });
-      
-      try {
-        // Simple camera constraints to start with
-        const constraints = {
-          video: {
-            // Lower resolution initially to avoid performance issues
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
-        
-        // Check if we're on mobile to use different constraints
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-          console.log('Mobile device detected, using mobile optimized constraints');
-          constraints.video = {
-            facingMode: 'environment',  // Prefer back camera
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          };
-        }
-        
-        console.log('Requesting camera with constraints:', constraints);
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('Camera access granted with stream:', mediaStream);
-        
-        // If on a mobile device with multiple cameras, we've already tried for the back camera
-        // If on desktop or we only have one camera, we'll just use what we got
-        
-        // Close the loading toast
-        toast.dismiss(loadingToast);
-        
-        // Set the stream and display camera
-        setStream(mediaStream);
-        setShowCamera(true);
-        
-        // Set up video element
-        if (videoRef.current) {
-          console.log('Setting up video element');
-          
-          videoRef.current.oncanplay = () => {
-            console.log('Video can play event fired');
-          };
-          
-          videoRef.current.onloadeddata = () => {
-            console.log('Video loaded data event fired - dimensions:', 
-              videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
-          };
-          
-          videoRef.current.onloadedmetadata = async () => {
-            console.log('Video metadata loaded');
-            try {
-              await videoRef.current.play();
-              console.log('Video playback started');
-              
-              // Add a timeout to verify video is playing correctly
-              setTimeout(() => {
-                if (videoRef.current && videoRef.current.paused) {
-                  console.warn('Video paused after metadata loaded');
-                  videoRef.current.play().catch(err => {
-                    console.error('Error playing video after timeout:', err);
-                  });
-                }
-              }, 1000);
-            } catch (playError) {
-              console.error('Error starting video after metadata loaded:', playError);
-              
-              // Add a play button for user-initiated play
-              const videoContainer = videoRef.current.parentElement;
-              if (videoContainer) {
-                const playButton = document.createElement('button');
-                playButton.innerText = 'Tap to Start Camera';
-                playButton.className = 'absolute inset-0 bg-black/50 text-white text-xl font-bold flex items-center justify-center z-20';
-                playButton.onclick = async () => {
-                  try {
-                    await videoRef.current.play();
-                    videoContainer.removeChild(playButton);
-                  } catch (err) {
-                    console.error('Error in manual play:', err);
-                    toast.error('Unable to start camera. Please try again or use image upload instead.');
-                  }
-                };
-                videoContainer.appendChild(playButton);
-              }
-            }
-          };
-          
-          // Set the stream to the video element
-          videoRef.current.srcObject = mediaStream;
-        }
-      } catch (cameraError) {
-        toast.dismiss(loadingToast);
-        console.error('Camera access error:', cameraError);
-        
-        // Provide clear error messages based on error type
-        if (cameraError.name === 'NotAllowedError' || cameraError.name === 'PermissionDeniedError') {
-          toast.error('Camera access was denied. Please check your browser permissions and try again.');
-        } else if (cameraError.name === 'NotFoundError') {
-          toast.error('No camera found on your device. Please try uploading images instead.');
-        } else if (cameraError.name === 'NotReadableError' || cameraError.name === 'AbortError') {
-          toast.error('Your camera is currently in use by another application or has encountered an error. Please close other apps using your camera and try again.');
-        } else {
-          toast.error(`Camera error: ${cameraError.message || 'Unknown error'}. Please try uploading images instead.`);
-        }
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
       }
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast.error('Something went wrong when trying to access the camera. Please try again or use image upload instead.');
+      console.error('Error accessing camera:', error);
+      toast.error('Could not access camera. Please check permissions and try again.');
     }
   };
-  
+
   const stopCamera = () => {
-    // Properly clean up all resources
     if (stream) {
-      try {
-        // Stop all tracks
-        const tracks = stream.getTracks();
-        tracks.forEach(track => {
-          try {
-            track.stop();
-          } catch (err) {
-            console.error('Error stopping track:', err);
-          }
-        });
-        
-        // Clear video source
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-        }
-        
-        setStream(null);
-      } catch (error) {
-        console.error('Error cleaning up camera:', error);
-      }
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      setStream(null);
     }
-    
-    // Reset UI state
     setShowCamera(false);
   };
-  
-  const captureImage = async () => {
+
+  const captureImage = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
       
-      console.log('Video state at capture:', {
-        currentTime: video.currentTime,
-        readyState: video.readyState,
-        paused: video.paused,
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight
-      });
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       
-      // Check if video is actually playing and ready
-      if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
-        // Try to remedy potential black screen issues before giving error
-        if (stream && stream.active && video.readyState >= 1) {
-          toast.info('Preparing camera for capture...');
-          
-          // Try refreshing the stream connection
-          video.srcObject = null;
-          setTimeout(() => {
-            if (videoRef.current && stream.active) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.play().catch(err => {
-                console.log('Error replaying video:', err);
-                toast.error('Camera is not ready yet. Please wait a moment and try again.');
-              });
-            }
-          }, 500);
-          return;
-        }
-        
-        toast.error('Camera is not ready yet. Please wait a moment and try again.');
-        return;
-      }
+      // Draw video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // Show loading toast for capture process
-      const loadingToast = toast.info('Capturing image...', { autoClose: false });
+      // Convert canvas to data URL
+      const imageDataUrl = canvas.toDataURL('image/jpeg');
       
-      try {
-        const context = canvas.getContext('2d');
-        if (!context) {
-          throw new Error('Could not get canvas context');
-        }
-        
-        // Set canvas dimensions to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Clear the canvas before drawing
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw video frame to canvas with retries if needed
-        let drawSuccess = false;
-        let retryCount = 0;
-        
-        // Try up to 3 times to capture an image - helps with some devices
-        while (!drawSuccess && retryCount < 3) {
-          try {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Check the canvas to see if it has content (simplified check)
-            const pixelData = context.getImageData(canvas.width/2, canvas.height/2, 1, 1).data;
-            const isBlack = pixelData[0] === 0 && pixelData[1] === 0 && pixelData[2] === 0;
-            
-            // If image is completely black, it might be a black screen issue
-            if (isBlack && retryCount < 2) {
-              console.log('Captured image appears black, retrying...');
-              retryCount++;
-              // Small delay before retry
-              await new Promise(resolve => setTimeout(resolve, 300));
-            } else {
-              drawSuccess = true;
-            }
-          } catch (drawError) {
-            retryCount++;
-            console.error(`Draw attempt ${retryCount} failed:`, drawError);
-            
-            if (retryCount >= 3) {
-              throw new Error(`Failed to capture frame after multiple attempts: ${drawError.message}`);
-            }
-            
-            // Wait briefly before trying again
-            await new Promise(resolve => setTimeout(resolve, 300));
-          }
-        }
-        
-        // Convert canvas to data URL with good quality (0.9)
-        let imageDataUrl;
-        try {
-          imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        } catch (dataUrlError) {
-          // This can happen with CORS issues or tainted canvas
-          throw new Error(`Failed to convert image: ${dataUrlError.message}`);
-        }
-        
-        // Check if image was successfully captured
-        if (!imageDataUrl || imageDataUrl === 'data:,') {
-          throw new Error('Failed to generate image data');
-        }
-        
-        // Check image data size to ensure it's valid
-        const estimatedSize = Math.round((imageDataUrl.length - 22) * 0.75 / 1024);
-        if (estimatedSize < 1) {
-          throw new Error('Image capture failed: empty or invalid image');
-        }
-        
-        // Add to preview and form data
-        setPreviewImages(prev => [...prev, imageDataUrl]);
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, imageDataUrl]
-        }));
-        
-        // Close camera after successful capture
-        stopCamera();
-        
-        // Dismiss loading toast and show success
-        toast.dismiss(loadingToast);
-        toast.success('Image captured successfully!');
-      } catch (error) {
-        // Dismiss loading toast and show error
-        toast.dismiss(loadingToast);
-        
-        console.error('Error capturing image:', error);
-        toast.error(`Failed to capture image. Please try again or use the image upload option instead.`);
-        
-        // Don't close camera on error so user can try again
-      }
-    } else {
-      toast.error('Camera is not initialized properly. Please try again or use image upload instead.');
+      // Add to preview and form data
+      setPreviewImages([...previewImages, imageDataUrl]);
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, imageDataUrl]
+      }));
+      
+      // Close camera after capture
+      stopCamera();
+      
+      toast.success('Image captured successfully!');
     }
   };
 
@@ -628,13 +314,6 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       }
     };
   }, [stream]);
-  
-  // Close camera if modal is closed
-  useEffect(() => {
-    if (!show && stream) {
-      stopCamera();
-    }
-  }, [show]);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -698,226 +377,48 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Images</h3>
             <div className="space-y-4">
-              {showCamera ? (
-                <div className="relative">
-                  {/* Hidden canvas for image capture */}
-                  <canvas ref={canvasRef} className="hidden"></canvas>
-                  
-                  {/* Camera container with improved UI */}
-                  <div className="relative rounded-xl overflow-hidden bg-black shadow-lg border border-gray-300">
-                    {/* Camera status and orientation indicators */}
-                    <div className="absolute z-10 top-0 inset-x-0 flex items-center justify-between px-4 py-2 bg-gradient-to-b from-black/70 to-transparent">
-                      <span className="flex items-center px-3 py-1 bg-black/50 text-white rounded-full text-sm backdrop-blur-sm">
-                        <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                        Camera Active
-                      </span>
-                      <span className="text-xs text-white bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
-                        {/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Tap screen to focus' : 'Ready to capture'}
-                      </span>
-                    </div>
-                    
-                    {/* Black screen troubleshooting overlay */}
-                    <div 
-                      className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none"
-                      id="camera-troubleshoot"
-                    >
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (videoRef.current && stream && stream.active) {
-                            // Try to reset the video element
-                            videoRef.current.srcObject = null;
-                            setTimeout(() => {
-                              if (videoRef.current && stream.active) {
-                                videoRef.current.srcObject = stream;
-                                videoRef.current.play().catch(console.error);
-                              }
-                            }, 300);
-                          }
-                        }}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg pointer-events-auto opacity-0 hover:opacity-100 transition-opacity duration-300"
-                      >
-                        Try to Fix Camera
-                      </button>
-                    </div>
-                    
-                    {/* Video element with enhanced error handling */}
-                    <video 
-                      ref={videoRef} 
-                      className="w-full h-80 md:h-96 object-cover mx-auto touch-none" 
-                      autoPlay 
-                      playsInline
-                      muted
-                      style={{ backgroundColor: '#111' }} // Dark background to help see loading state
-                      onError={(e) => {
-                        console.error('Video element error:', e.target.error);
-                        toast.error('Video error occurred. Please try again.');
-                      }}
-                      onPlay={() => console.log('Video play event triggered')}
-                      onClick={(e) => {
-                        // Try to focus on tap (works on some mobile browsers)
-                        if (videoRef.current && videoRef.current.srcObject) {
-                          const tracks = videoRef.current.srcObject.getVideoTracks();
-                          if (tracks.length > 0 && typeof tracks[0].focus === 'function') {
-                            try {
-                              tracks[0].focus();
-                            } catch (err) {
-                              console.log('Manual focus not supported');
-                            }
-                          }
-                          
-                          // Try restarting the video - sometimes helps with black screens
-                          if (videoRef.current.paused) {
-                            videoRef.current.play().catch(err => {
-                              console.log('Could not play on tap:', err);
-                            });
-                          }
-                        }
-                      }}
-                    ></video>
-                    
-                    {/* Capture button - large circular button for easy access */}
-                    <div className="absolute bottom-4 inset-x-0 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={captureImage}
-                        className="w-16 h-16 rounded-full bg-white border-4 border-blue-600 shadow-xl flex items-center justify-center hover:bg-blue-100 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all"
-                        aria-label="Take Photo"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                    
-                    {/* Cancel button - positioned in corner */}
-                    <button
-                      type="button"
-                      onClick={stopCamera}
-                      className="absolute top-14 right-4 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
-                      aria-label="Cancel camera"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg className="w-8 h-8 mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="mb-2 text-sm text-gray-700">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 5MB)</p>
                   </div>
-                  
-                  {/* Camera instructions - improved for mobile */}
-                  <div className="mt-4 bg-gray-100 rounded-xl p-3 shadow-sm">
-                    <h4 className="font-medium text-gray-900 text-sm mb-2">Tips for better photos:</h4>
-                    <ul className="text-xs text-gray-600 space-y-1 pl-5 list-disc">
-                      <li>Ensure adequate lighting in the confined space</li>
-                      <li>Hold your device steady when capturing</li>
-                      <li>Capture wide shots to show the entire space</li>
-                      <li>Take close-ups of important details and hazards</li>
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* File Upload */}
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg className="w-10 h-10 mb-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <p className="mb-2 text-sm font-medium text-gray-800">
-                          <span className="font-semibold">Upload Images</span>
-                        </p>
-                        <p className="text-xs text-gray-500">PNG, JPG or JPEG</p>
-                        <p className="text-xs text-gray-500 mt-1">Tap to select files</p>
-                      </div>
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        multiple 
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        aria-label="Upload images"
-                      />
-                    </label>
-                  </div>
-                  
-                  {/* Camera Capture */}
-                  <div className="flex items-center justify-center w-full">
-                    <button
-                      type="button"
-                      onClick={startCamera}
-                      className="flex flex-col items-center justify-center w-full h-36 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors shadow-sm"
-                      aria-label="Take photos with camera"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg className="w-10 h-10 mb-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <p className="mb-2 text-sm font-medium text-gray-800">
-                          <span className="font-semibold">Take Photos</span>
-                        </p>
-                        <p className="text-xs text-gray-500">Use your device camera</p>
-                        <p className="text-xs text-gray-500 mt-1">Tap to activate</p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
-              
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
+
               {/* Image Preview Grid */}
               {previewImages.length > 0 && (
-                <div className="mt-6 bg-gray-100 p-4 rounded-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-md font-medium text-gray-900">Uploaded Images ({previewImages.length})</h4>
-                    {previewImages.length > 1 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  {previewImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg shadow-md"
+                      />
                       <button
                         type="button"
-                        onClick={() => {
-                          if(confirm('Are you sure you want to remove all images?')) {
-                            setPreviewImages([]);
-                            setFormData(prev => ({ ...prev, images: [] }));
-                            toast.success('All images removed');
-                          }
-                        }}
-                        className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                       >
-                        Remove All
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {previewImages.map((image, index) => (
-                      <div key={index} className="relative group bg-white p-1 rounded-lg shadow-sm border border-gray-100">
-                        <div className="aspect-square overflow-hidden rounded-md">
-                          <img
-                            src={image}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="p-2 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-colors"
-                            aria-label={`Remove image ${index + 1}`}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                          {index + 1}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -937,8 +438,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   required 
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                 />
-              </div>
-              <div>
+              </div>              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Technician *</label>
                 <input 
                   type="text" 
@@ -948,8 +448,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   required 
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
                 />
-              </div>
-              <div>
+              </div>              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Space Name/ID *</label>
                 {isLoadingLocations ? (
                   <div className="flex items-center">
@@ -975,8 +474,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                   />
                 )}
-              </div>
-              <div>
+              </div>              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Building *</label>
                 {assignedLocations.length > 0 ? (
                   <input 
@@ -997,8 +495,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                   />
                 )}
-              </div>
-              <div className="md:col-span-2">
+              </div>              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location Description</label>
                 {assignedLocations.length > 0 ? (
                   <input 
@@ -1031,7 +528,269 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
             </div>
           </div>
 
-          {/* More sections for other form fields would go here */}
+          {/* Section 2: Space Classification */}
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Space Classification</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Is this a Confined Space? *</label>
+                <select 
+                  name="confinedSpace" 
+                  value={formData.confinedSpace ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Permit Required? *</label>
+                <select 
+                  name="permitRequired" 
+                  value={formData.permitRequired ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Entry Requirements</label>
+                <input 
+                  type="text" 
+                  name="entryRequirements" 
+                  value={formData.entryRequirements || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Hazards Assessment */}
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Hazards Assessment</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Atmospheric Hazard? *</label>
+                <select 
+                  name="atmosphericHazard" 
+                  value={formData.atmosphericHazard ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Atmospheric Hazard Description</label>
+                <input 
+                  type="text" 
+                  name="atmosphericHazardDescription" 
+                  value={formData.atmosphericHazardDescription || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Engulfment Hazard? *</label>
+                <select 
+                  name="engulfmentHazard" 
+                  value={formData.engulfmentHazard ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Engulfment Hazard Description</label>
+                <input 
+                  type="text" 
+                  name="engulfmentHazardDescription" 
+                  value={formData.engulfmentHazardDescription || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Configuration Hazard? *</label>
+                <select 
+                  name="configurationHazard" 
+                  value={formData.configurationHazard ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Configuration Hazard Description</label>
+                <input 
+                  type="text" 
+                  name="configurationHazardDescription" 
+                  value={formData.configurationHazardDescription || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Other Recognized Hazards? *</label>
+                <select 
+                  name="otherRecognizedHazards" 
+                  value={formData.otherRecognizedHazards ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Other Hazards Description</label>
+                <input 
+                  type="text" 
+                  name="otherHazardsDescription" 
+                  value={formData.otherHazardsDescription || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Safety Measures */}
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Safety Measures</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">PPE Required? *</label>
+                <select 
+                  name="ppeRequired" 
+                  value={formData.ppeRequired ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">PPE List</label>
+                <input 
+                  type="text" 
+                  name="ppeList" 
+                  value={formData.ppeList || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Forced Air Ventilation Sufficient? *</label>
+                <select 
+                  name="forcedAirVentilationSufficient" 
+                  value={formData.forcedAirVentilationSufficient ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Dedicated Air Monitor? *</label>
+                <select 
+                  name="dedicatedContinuousAirMonitor" 
+                  value={formData.dedicatedContinuousAirMonitor ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Warning Sign Posted? *</label>
+                <select 
+                  name="warningSignPosted" 
+                  value={formData.warningSignPosted ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Number of Entry Points</label>
+                <input 
+                  type="number" 
+                  name="numberOfEntryPoints" 
+                  value={formData.numberOfEntryPoints || ""} 
+                  onChange={handleChange} 
+                  min="0"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Additional Information */}
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Other People Working Near Space? *</label>
+                <select 
+                  name="otherPeopleWorkingNearSpace" 
+                  value={formData.otherPeopleWorkingNearSpace ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Can Others See into Space? *</label>
+                <select 
+                  name="canOthersSeeIntoSpace" 
+                  value={formData.canOthersSeeIntoSpace ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Do Contractors Enter Space? *</label>
+                <select 
+                  name="contractorsEnterSpace" 
+                  value={formData.contractorsEnterSpace ? "true" : "false"} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                >
+                  {boolOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Notes</label>
+                <textarea 
+                  name="notes" 
+                  value={formData.notes || ""} 
+                  onChange={handleChange} 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all min-h-[100px]" 
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-end space-x-4 pt-4">
             <button 
