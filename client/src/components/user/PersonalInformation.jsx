@@ -106,7 +106,7 @@ const PersonalInformation = ({ user }) => {
                             </div>
                             <input
                                 type="text"
-                                value={user.role || "Senior Technician"}
+                                value={user.role || "Technician"}
                                 className="block w-full rounded-xl border-0 bg-gray-50/70 py-3.5 pl-12 pr-4 text-gray-900 font-medium shadow-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-blue-500 read-only:bg-gray-50/50 transition-all"
                                 readOnly
                             />

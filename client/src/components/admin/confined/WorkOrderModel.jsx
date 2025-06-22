@@ -212,48 +212,68 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       }));
     }
   };
-
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    
+    // Check if adding these files would exceed the 3-image limit
+    if (previewImages.length + files.length > 3) {
+      toast.warning(`You can only upload up to 3 images. Currently ${previewImages.length} image(s) are uploaded.`);
+      return;
+    }
+    
     const newPreviewImages = [];
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
 
     files.forEach(file => {
+      // Check if the file is an image
       if (file.type.startsWith('image/')) {
+        // Check file size
+        if (file.size > maxFileSize) {
+          toast.error(`File ${file.name} exceeds the 5MB size limit`);
+          return;
+        }
+        
         const reader = new FileReader();
         reader.onloadend = () => {
           newPreviewImages.push(reader.result);
-          setPreviewImages([...previewImages, ...newPreviewImages]);
+          setPreviewImages(prev => [...prev, reader.result]);
           setFormData(prev => ({
             ...prev,
-            images: [...prev.images, reader.result]
+            images: [...(prev.images || []), file]
           }));
         };
         reader.readAsDataURL(file);
       } else {
-        toast.error('Please upload only image files');
+        toast.error('Please upload only image files (PNG, JPG or JPEG)');
       }
     });
-  };
-  const removeImage = (index) => {
+  };  const removeImage = (index) => {
+    // Remove from preview images
     const newPreviewImages = previewImages.filter((_, i) => i !== index);
-    const newImages = formData.images.filter((_, i) => i !== index);
     setPreviewImages(newPreviewImages);
+    
+    // Remove from form data images
+    const newImages = formData.images ? formData.images.filter((_, i) => i !== index) : [];
     setFormData(prev => ({
       ...prev,
       images: newImages
     }));
+    
+    toast.info('Image removed');
   };
 
   // Camera functions
   const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }, // 'environment' for back camera (if available)
+    try {      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment', // 'environment' for back camera (if available)
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: false
       });
       
       setStream(mediaStream);
-      setShowCamera(true);
       
       // Once camera is opened
       if (videoRef.current) {
@@ -274,9 +294,14 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     }
     setShowCamera(false);
   };
-
   const captureImage = () => {
     if (videoRef.current && canvasRef.current) {
+      // Check if we've reached the 3 image limit
+      if (previewImages.length >= 3) {
+        toast.warning('Maximum of 3 images allowed. Please remove an image before adding another.');
+        return;
+      }
+      
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
@@ -293,10 +318,19 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       
       // Add to preview and form data
       setPreviewImages([...previewImages, imageDataUrl]);
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, imageDataUrl]
-      }));
+      
+      // Convert base64 to blob for form submission
+      fetch(imageDataUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          
+          // Update form data with new image
+          setFormData(prev => ({
+            ...prev,
+            images: [...(prev.images || []), file]
+          }));
+        });
       
       // Close camera after capture
       stopCamera();
@@ -304,8 +338,14 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       toast.success('Image captured successfully!');
     }
   };
+  // Start camera when the camera modal opens
+  useEffect(() => {
+    if (showCamera && !stream) {
+      startCamera();
+    }
+  }, [showCamera]);
 
-  // Clean up camera stream when component unmounts
+  // Clean up camera stream when component unmounts or modal closes
   useEffect(() => {
     return () => {
       if (stream) {
@@ -376,49 +416,126 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
           {/* Image Upload Section */}
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Images</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg className="w-8 h-8 mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="mb-2 text-sm text-gray-700">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 5MB)</p>
-                  </div>
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    multiple 
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </label>
-              </div>
-
-              {/* Image Preview Grid */}
-              {previewImages.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  {previewImages.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg shadow-md"
+            <div className="space-y-4">              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg className="w-8 h-8 mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="mb-2 text-sm text-gray-700">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 5MB)</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        multiple 
+                        accept="image/*"
+                        onChange={handleImageUpload}
                       />
+                    </label>
+                  </div>
+                  <div className="flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCamera(true)}
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg className="w-8 h-8 mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <p className="mb-2 text-sm text-gray-700">
+                          <span className="font-semibold">Take a photo</span>
+                        </p>
+                        <p className="text-xs text-gray-500">Use your camera</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Camera Modal */}
+                {showCamera && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+                    <div className="bg-white rounded-xl p-4 max-w-xl w-full relative">
                       <button
                         type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        onClick={stopCamera}
+                        className="absolute top-2 right-2 text-gray-700 hover:text-gray-900"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
+                      <h3 className="text-lg font-semibold mb-4">Take a Photo</h3>
+                      <div className="relative bg-black rounded-lg overflow-hidden">
+                        <video
+                          ref={videoRef}
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          playsInline
+                          style={{ display: stream ? 'block' : 'none' }}
+                        ></video>
+                        <canvas ref={canvasRef} className="hidden"></canvas>
+                        {!stream && (
+                          <div className="flex items-center justify-center h-72 bg-gray-900">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-center mt-4">
+                        <button
+                          type="button"
+                          onClick={captureImage}
+                          className="px-6 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl shadow hover:from-gray-800 hover:to-gray-700 transition-all"
+                          disabled={!stream}
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                              <circle cx="12" cy="13" r="3" />
+                            </svg>
+                            Capture Photo
+                          </div>
+                        </button>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Image Preview Grid */}              {previewImages.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-900">Preview</h4>
+                    <span className={`text-xs px-2 py-1 rounded-full ${previewImages.length >= 3 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                      {previewImages.length}/3 images
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {previewImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg shadow-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
