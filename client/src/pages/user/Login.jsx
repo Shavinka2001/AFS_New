@@ -23,7 +23,7 @@ const Login = () => {
     // Check if user is already logged in
     const user = getUser();
     if (user) {
-      navigate(user.isAdmin ? "/admin" : "/user/dashboard");
+      navigate(user.isAdmin ? "/admin/dashboard" : "/user/dashboard");
     }
   }, [location, navigate]);
 
@@ -52,7 +52,7 @@ const Login = () => {
       // Navigate based on user role
       setTimeout(() => {
         if (data.user.isAdmin || data.user.userType === 'admin') {
-          navigate("/admin");
+          navigate("/admin/dashboard");
         } else {
           navigate("/user/dashboard");
         }
