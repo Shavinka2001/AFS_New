@@ -90,60 +90,55 @@ const UserTable = ({ users, loading }) => {
 
 // Location Card Component for Dashboard
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
-  // No expanded state needed since we want to show all orders by default
-  
-  return (    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-2 py-2 border-b border-gray-200">
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md h-[320px] flex flex-col w-full relative">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-1.5">
-            <LocationIcon className="h-3.5 w-3.5 text-gray-700" />
+          <div className="flex items-center space-x-2">
+            <LocationIcon className="h-4 w-4 text-gray-700" />
             <div>
-              <h3 className="text-xs font-bold text-gray-900 leading-tight">{location.name}</h3>
-              <p className="text-2xs text-gray-600 truncate max-w-[150px]">{location.address}</p>
+              <h3 className="text-sm font-bold text-gray-900 leading-tight">{location.name}</h3>
+              <p className="text-xs text-gray-600 truncate max-w-[180px]">{location.address}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-2xs font-medium bg-blue-100 text-blue-800">
+          <div className="flex items-center space-x-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {orders.length}
             </span>
-            <button
-              onClick={() => onAddOrder(location)}
-              className="p-0.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-              title="Add Work Order"
-            >
-              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </button>
+           
           </div>
         </div>
-      </div><div className="px-2 py-1.5">{orders.length === 0 ? (          <div className="flex items-center justify-center text-center py-1">
-            <ClipboardIcon className="h-3 w-3 text-gray-400 mr-1" />
-            <p className="text-2xs text-gray-500">No work orders</p>
+      </div>      <div className="px-3 py-2 flex-1 flex flex-col overflow-hidden">
+        {orders.length === 0 ? (
+          <div className="flex items-center justify-center text-center py-4 flex-1">
+            <ClipboardIcon className="h-4 w-4 text-gray-400 mr-1" />
+            <p className="text-xs text-gray-500">No work orders</p>
           </div>
-        ) : (<div className="space-y-1">
-            {/* Even more compact table-like view */}
-            <div className="max-h-80 overflow-y-auto -mx-2">
-              <table className="min-w-full text-xs border-collapse">
-                <thead className="bg-gray-50 sticky top-0 z-10">
-                  <tr className="text-xs">
-                    <th scope="col" className="px-1.5 py-1 text-left text-xs font-medium text-gray-500">
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header for table */}            <div className="bg-gray-50 sticky top-0 z-10 rounded-t-md">
+              <table className="min-w-full text-xs border-collapse table-fixed">
+                <thead>                  <tr className="text-xs">
+                    <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 w-[40%]">
                       ID
                     </th>
-                    <th scope="col" className="px-1.5 py-1 text-left text-xs font-medium text-gray-500">
+                    <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 w-[30%]">
                       Date
                     </th>
-                    <th scope="col" className="px-1.5 py-1 text-right text-xs font-medium text-gray-500">
+                    <th scope="col" className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-[30%]">
                       Actions
                     </th>
                   </tr>
-                </thead>
+                </thead>              </table>            </div>
+              {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[230px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
+              <table className="min-w-full text-xs border-collapse table-fixed">
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {orders.map((order, index) => (
-                    <tr 
+                  {/* All orders in a single scrollable list */}
+                  {orders.map((order, index) => (                    <tr 
                       key={order._id || index} 
-                      className="hover:bg-gray-50 transition-colors"
+                      className="hover:bg-gray-50 transition-colors h-[46px]"
                     >
-                      <td className="px-1.5 py-1 whitespace-nowrap">
+                      <td className="px-2 py-2 whitespace-nowrap">
                         <div className="flex items-center">
                           <span className="font-medium text-gray-900 truncate max-w-[100px]">{order.confinedSpaceNameOrId}</span>
                           <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
@@ -151,48 +146,58 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                           </span>
                         </div>
                       </td>
-                      <td className="px-1.5 py-1 whitespace-nowrap text-2xs text-gray-500">
+                      <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
                         <div className="flex items-center">
-                          <CalendarIcon className="mr-0.5 h-2.5 w-2.5 flex-shrink-0" />
+                          <CalendarIcon className="mr-1 h-3 w-3 flex-shrink-0" />
                           <span className="truncate max-w-[80px]">{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
                         </div>
                       </td>
-                      <td className="px-1.5 py-1 whitespace-nowrap text-right">
-                        <div className="flex justify-end space-x-0.5">
+                      <td className="px-2 py-2 whitespace-nowrap text-right">
+                        <div className="flex justify-end space-x-1">
                           <button 
                             onClick={() => onViewOrder(order)} 
-                            className="p-0.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
+                            className="p-1 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
                             title="View Order"
                           >
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                           </button>
                           <button
                             onClick={() => downloadSinglePDF(order)}
-                            className="p-0.5 rounded text-gray-600 hover:bg-gray-50 transition-colors"
+                            className="p-1 rounded text-gray-600 hover:bg-gray-50 transition-colors"
                             title="Download PDF"
                           >
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </button>
                           <button 
                             onClick={() => onDeleteOrder(order._id)} 
-                            className="p-0.5 rounded text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete Order"
                           >
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
-                        </div>
-                      </td>
+                        </div>                      
+                      </td>                    
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            {/* View All Orders Button */}
+            <div className="mt-auto pt-2 border-t border-gray-100">
+              <a href={`/admin/workorders?location=${location._id}`} className="text-xs text-blue-600 hover:text-blue-800 flex items-center justify-center py-1">
+                View All Orders
+                <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
             </div>
           </div>
         )}
@@ -202,16 +207,22 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
 };
 
 // Dashboard Work Order Grid Component
-const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
-  if (loading) {
+const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {  if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-80 bg-gray-100 rounded-xl animate-pulse flex flex-col">
-            <div className="h-16 bg-gray-200 rounded-t-xl"></div>
-            <div className="flex-1 p-4 space-y-3">
-              <div className="h-20 bg-gray-200 rounded-lg w-full"></div>
-              <div className="h-20 bg-gray-200 rounded-lg w-full"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {[...Array(2)].map((_, i) => (          <div key={i} className="h-[420px] bg-gray-100 rounded-xl animate-pulse flex flex-col">
+            <div className="h-16 bg-gray-200 rounded-t-xl"></div>            <div className="flex-1 p-4 space-y-3">
+              <div className="h-8 bg-gray-200 rounded-lg w-full mb-2"></div>
+              {/* Scrollable area for orders */}
+              <div className="h-[230px] overflow-hidden space-y-2">
+                <div className="h-10 bg-gray-200 rounded-lg w-full"></div>
+                <div className="h-10 bg-gray-200 rounded-lg w-full"></div>
+                <div className="h-10 bg-gray-200 rounded-lg w-full"></div>
+                <div className="h-10 bg-gray-200 rounded-lg w-full"></div>
+                <div className="h-10 bg-gray-200 rounded-lg w-full"></div>
+              </div>
+              {/* View All Orders button placeholder */}
+              <div className="h-6 bg-gray-200 rounded-lg w-1/3 mx-auto mt-auto"></div>
             </div>
           </div>
         ))}
@@ -234,8 +245,11 @@ const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onE
       </div>
     );
   }
-    return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">      {locationEntries.map((entry) => (        <LocationCard 
+  
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {locationEntries.map((entry) => (
+        <LocationCard 
           key={entry.location._id} 
           location={entry.location} 
           orders={entry.orders}
@@ -279,7 +293,7 @@ const CalendarIcon = ({ className = "w-4 h-4" }) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
-      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 012 2z"
     />
   </svg>
 )
@@ -341,8 +355,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [orderLoading, setOrderLoading] = useState(true)
   const [locationLoading, setLocationLoading] = useState(true)
-  const [admin, setAdmin] = useState({
-    firstname: "Admin",
+  const [admin, setAdmin] = useState({    firstname: "Admin",
     lastname: "",
     userType: "admin",
   })
@@ -350,6 +363,19 @@ export default function Dashboard() {
   const [currentOrder, setCurrentOrder] = useState(null)
   const [isEdit, setIsEdit] = useState(false)
   const [isView, setIsView] = useState(false)
+  const [currentDateTime, setCurrentDateTime] = useState({
+    date: new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    time: new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    })
+  })
   // Define fetchData function outside useEffect to make it reusable
   const fetchData = async () => {
     setLoading(true)
@@ -434,7 +460,6 @@ export default function Dashboard() {
     }
     setLoading(false)
   }
-
   useEffect(() => {
     // Get admin info from localStorage (set this on login)
     const adminData = localStorage.getItem("User")
@@ -449,17 +474,28 @@ export default function Dashboard() {
     fetchData()
   }, [])
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-  const currentTime = new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  // Effect for updating the time dynamically
+  useEffect(() => {
+    // Update time every second
+    const timer = setInterval(() => {
+      setCurrentDateTime({
+        date: new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        time: new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        })
+      });
+    }, 1000);
 
+    // Cleanup timer on component unmount
+    return () => clearInterval(timer);
+  }, [])
   // Handler functions for work orders
   const handleViewOrder = (order) => {
     setCurrentOrder(order)
@@ -529,7 +565,7 @@ export default function Dashboard() {
     setCurrentOrder(null)
   }
 
-  const downloadSinglePDF = (order) => {
+  const downloadSinglePDF = async (order) => {
     try {
       const doc = new jsPDF();
       
@@ -556,18 +592,144 @@ export default function Dashboard() {
       doc.setFont(undefined, 'bold');
       doc.text("1. LOCATION INFORMATION", 14, 50);
       
+      let currentY = 55;
+      
       autoTable(doc, {
         body: locationInfo,
-        startY: 55,
+        startY: currentY,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
       
+      // Add images section if available
+      if (order.pictures && order.pictures.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text("CONFINED SPACE IMAGES", 14, currentY);
+        currentY += 10;
+        
+        // Track the promises for image loading
+        const imagePromises = [];
+        const imgInfos = [];
+        
+        // Prepare image loading
+        for (let i = 0; i < order.pictures.length && i < 3; i++) {
+          const imgPath = order.pictures[i];
+          const imageUrl = imgPath.startsWith('http') 
+            ? imgPath 
+            : `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}`;
+          
+          const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              // Set canvas dimensions proportional to image
+              let imgWidth = img.width;
+              let imgHeight = img.height;
+              const maxWidth = 170;
+              const maxHeight = 120;
+              
+              // Resize image to fit within maximum dimensions while maintaining aspect ratio
+              if (imgWidth > maxWidth || imgHeight > maxHeight) {
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                imgWidth *= ratio;
+                imgHeight *= ratio;
+              }
+              
+              canvas.width = imgWidth;
+              canvas.height = imgHeight;
+              
+              // Draw image on canvas
+              ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
+              
+              // Get image data as base64
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              
+              // Store image info for adding to PDF
+              imgInfos.push({
+                dataUrl,
+                width: imgWidth,
+                height: imgHeight
+              });
+              
+              resolve();
+            };
+            
+            img.onerror = (err) => {
+              console.error(`Error loading image: ${imageUrl}`, err);
+              resolve(); // Resolve anyway to continue with other images
+            };
+            
+            img.src = imageUrl;
+          });
+          
+          imagePromises.push(promise);
+        }
+        
+        // Wait for all images to load
+        await Promise.all(imagePromises);
+        
+        // Add images to PDF once loaded
+        if (imgInfos.length > 0) {
+          // Define dimensions
+          const marginLeft = 14;
+          const marginRight = 14;
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const availableWidth = pageWidth - marginLeft - marginRight;
+          const xPositions = [marginLeft, marginLeft + availableWidth / 2];
+          
+          let xPos = marginLeft;
+          let yPos = currentY;
+          const spaceBetweenImages = 10;
+          
+          // Add each image
+          for (let i = 0; i < imgInfos.length; i++) {
+            const imgInfo = imgInfos[i];
+            
+            // Check if we need to add a new row
+            if (i > 0 && i % 2 === 0) {
+              yPos += imgInfo.height + spaceBetweenImages;
+              xPos = marginLeft;
+            } else if (i > 0) {
+              xPos = marginLeft + availableWidth / 2;
+            }
+            
+            // Check if we need a new page
+            if (yPos + imgInfo.height > doc.internal.pageSize.getHeight() - 20) {
+              doc.addPage();
+              yPos = 20;
+              xPos = marginLeft;
+            }
+            
+            try {
+              doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
+            } catch (imgError) {
+              console.error('Error adding image to PDF:', imgError);
+            }
+          }
+          
+          // Update Y position for next content
+          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages;
+        } else {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'italic');
+          doc.text("No images available", marginLeft, currentY + 10);
+          currentY += 20;
+        }
+      }
+      
       // Add more sections with hazard data, classifications etc.
+      
       // Save the PDF
       doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
     } catch (error) {
@@ -607,15 +769,14 @@ export default function Dashboard() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight">
                 Welcome back, {admin.firstname} {admin.lastname}!
-              </h1>
-              <div className="flex items-center space-x-4 text-slate-300">
+              </h1>              <div className="flex items-center space-x-4 text-slate-300">
                 <div className="flex items-center space-x-2">
                   <CalendarIcon />
-                  <span className="text-sm">{currentDate}</span>
+                  <span className="text-sm">{currentDateTime.date}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <ClockIcon />
-                  <span className="text-sm">{currentTime}</span>
+                  <span className="text-sm">{currentDateTime.time}</span>
                 </div>
               </div>
             </div>
@@ -660,18 +821,18 @@ export default function Dashboard() {
                 <WorkOrderIcon className="h-5 w-5" />
                 <span>Work Orders by Location</span>
               </h2>
-                <div className="flex items-center space-x-3">
-                
-                
+              <div className="flex items-center space-x-3">
                 <a href="/admin/workorders" className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center bg-white px-3 py-2 rounded-md border border-blue-100 hover:border-blue-200 shadow-sm hover:shadow transition-all">
-                  View All
+                  View All Orders
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </a>
               </div>
             </div>
-          </div>          <div className="p-6">            <WorkOrderLocationGrid 
+          </div>
+          <div className="p-6 lg:p-8">
+            <WorkOrderLocationGrid 
               workOrdersByLocation={workOrdersByLocation} 
               loading={orderLoading || locationLoading}
               onViewOrder={handleViewOrder}

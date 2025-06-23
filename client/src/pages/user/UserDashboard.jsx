@@ -76,8 +76,7 @@ function TechnicianDashboard() {
     
     // Toggle mobile menu
     const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
-    
-    useEffect(() => {
+      useEffect(() => {
         // Close mobile menu when changing tabs
         setMobileMenuOpen(false);
         
@@ -85,6 +84,14 @@ function TechnicianDashboard() {
         if (userData) {
             try {
                 const parsedUser = JSON.parse(userData);
+                
+                // Check if user is admin - redirect to admin dashboard
+                if (parsedUser.isAdmin || parsedUser.userType === 'admin') {
+                    toast.info('Admin users should use the admin dashboard');
+                    navigate('/admin/dashboard');
+                    return;
+                }
+                
                 setUser(parsedUser);
                 if (parsedUser.profileImage) {
                     setPreviewImage(parsedUser.profileImage);
@@ -220,10 +227,34 @@ function TechnicianDashboard() {
     const handleEditWorkOrder = (order) => {
         setSelectedWorkOrder(order);
         setShowWorkOrderModal(true);
+    };    const [deletingOrderId, setDeletingOrderId] = useState(null);
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        orderId: null
+    });
+    
+    // Handle initiating work order deletion
+    const handleDeleteWorkOrder = (orderId) => {
+        setDeleteConfirmModal({
+            isOpen: true,
+            title: 'Delete Work Order',
+            message: 'Are you sure you want to delete this work order? This action cannot be undone.',
+            orderId
+        });
     };
-
-    const handleDeleteWorkOrder = async (orderId) => {
+    
+    // Handle confirmed work order deletion
+    const handleConfirmDeleteWorkOrder = async () => {
+        const orderId = deleteConfirmModal.orderId;
+        
         try {
+            // Set the order as being deleted
+            setDeletingOrderId(orderId);
+            // Close the modal
+            setDeleteConfirmModal({ isOpen: false, title: '', message: '', orderId: null });
+            
             const response = await deleteWorkOrder(orderId);
             if (response) {
                 toast.success('Work order deleted successfully');
@@ -233,8 +264,15 @@ function TechnicianDashboard() {
             console.error('Error deleting work order:', error);
             const errorMessage = error.response?.data?.message || error.message || 'Failed to delete work order';
             toast.error(errorMessage);
+        } finally {
+            setDeletingOrderId(null);
         }
-    };    // State to prevent duplicate form submissions
+    };
+    
+    // Handle cancel delete work order
+    const handleCancelDeleteWorkOrder = () => {
+        setDeleteConfirmModal({ isOpen: false, title: '', message: '', orderId: null });
+    };// State to prevent duplicate form submissions
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const handleWorkOrderSubmit = async (formData) => {
@@ -421,11 +459,11 @@ function TechnicianDashboard() {
             description: 'Manage your confined space work orders'
         },
     ];    return (
-        <div className="min-h-screen bg-gray-50 flex">
-            {/* Mobile Menu Button - Only visible on small screens */}
+        <div className="min-h-screen bg-gray-50 flex">            {/* Mobile Menu Button - Visible on all screens except large desktops */}
             <button 
-                className="fixed top-4 left-4 p-2 rounded-lg bg-gray-900 text-white shadow-lg lg:hidden z-50"
+                className="fixed top-4 left-4 p-2 rounded-lg bg-gray-900 text-white shadow-lg xl:hidden z-50"
                 onClick={toggleMobileMenu}
+                aria-label="Toggle menu"
             >
                 {mobileMenuOpen ? (
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,21 +474,19 @@ function TechnicianDashboard() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
                     </svg>
                 )}
-            </button>
-            
-            {/* Sidebar - Fixed position with modern styling - Hidden on mobile unless menu is open */}
-            <div className={`fixed top-0 left-0 bottom-0 w-72 bg-white shadow-xl border-r border-gray-100 z-40 overflow-y-auto transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            </button>{/* Sidebar - Fixed position with modern styling - Only visible on large screens or when menu is opened */}
+            <div className={`fixed top-0 left-0 bottom-0 w-72 bg-white shadow-xl border-r border-gray-100 z-40 overflow-y-auto transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0`}>
                 {/* Sidebar header with gradient background */}
-                <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6">
-                    <div className="flex items-center space-x-4">
-                        <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border-2 border-white/30">
-                            <span className="text-white font-bold text-xl">
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4 lg:p-6">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                        <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border-2 border-white/30 flex-shrink-0">
+                            <span className="text-white font-bold text-lg sm:text-xl">
                                 {user.firstname?.[0] || "T"}
                                 {user.lastname?.[0] || ""}
                             </span>
                         </div>
-                        <div>
-                            <p className="text-base font-bold text-white">
+                        <div className="min-w-0">
+                            <p className="text-sm sm:text-base font-bold text-white truncate">
                                 {user.firstname} {user.lastname}
                             </p>
                             <div className="mt-1 flex items-center">
@@ -461,10 +497,9 @@ function TechnicianDashboard() {
                     </div>
                 </div>
                 
-                {/* Navigation section with hover effects */}
-                <div className="p-4">
+                {/* Navigation section with hover effects */}                <div className="p-4">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mx-2 mb-2">Main Menu</p>
-                    <nav className="space-y-1">                        {navItems.map((item) => (
+                    <nav className="space-y-1">{navItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => {
@@ -512,19 +547,18 @@ function TechnicianDashboard() {
                         </svg>
                         <span>Logout</span>
                     </button>
-                </div>            </div>              {/* Overlay to close mobile menu when clicking outside */}
-            {mobileMenuOpen && (                <div 
-                    className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 lg:hidden"
+                </div>            </div>              {/* Overlay to close mobile menu when clicking outside */}            {mobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 xl:hidden"
                     onClick={toggleMobileMenu}
                 ></div>
-            )}
-            
-            {/* Main Content - Responsive margin-left */}
-            <div className="flex-1 ml-0 lg:ml-72 transition-all duration-300">
-                {/* Modern Header with responsive styling */}                <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
-                    <div className="px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                        <div className="ml-12 pl-2 lg:ml-0 lg:pl-0 flex-1">
-                            <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+            )}{/* Main Content - Responsive margin-left */}
+            <div className="flex-1 ml-0 xl:ml-72 transition-all duration-300">
+                {/* Modern Header with responsive styling */}                
+                <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
+                    <div className="px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-2">
+                        <div className="ml-12 pl-2 lg:ml-12 lg:pl-0 flex-1 min-w-0">
+                            <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 truncate">
                                 Technician Dashboard
                             </h1>
                         </div>
@@ -565,7 +599,8 @@ function TechnicianDashboard() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                                    {assignedLocations.map((location) => (                                        <div key={location._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                                    {assignedLocations.map((location) => (
+                                        <div key={location._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
                                             <div className="p-4 sm:p-6">
                                                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center justify-between flex-wrap gap-2">
                                                     <span className="truncate">{location.name}</span>
@@ -722,14 +757,22 @@ function TechnicianDashboard() {
                     onClose={() => setShowUpdateForm(false)}
                 />
             )}
-            
-            {/* Confirm Modal */}
+              {/* Work Close Confirm Modal */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}
                 message={confirmModal.message}
                 onConfirm={handleConfirmCloseWork}
                 onCancel={handleCancelCloseWork}
+            />
+            
+            {/* Work Order Delete Confirm Modal */}
+            <ConfirmModal
+                isOpen={deleteConfirmModal.isOpen}
+                title={deleteConfirmModal.title}
+                message={deleteConfirmModal.message}
+                onConfirm={handleConfirmDeleteWorkOrder}
+                onCancel={handleCancelDeleteWorkOrder}
             />
         </div>
     );
