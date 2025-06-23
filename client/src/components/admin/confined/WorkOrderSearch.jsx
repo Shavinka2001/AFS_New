@@ -1,55 +1,82 @@
 import React from "react";
 
-const WorkOrderSearch = ({ search, onChange, onSearch }) => (
-  <form onSubmit={onSearch} className="mb-6 sm:mb-8">
-    <div className="flex flex-col sm:flex-row gap-4">
-      <div className="flex-1">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-            <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+const WorkOrderSearch = ({ search, onChange, onSearch, onClear }) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSearch(e);
+  };
+
+  return (
+    <div>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">Search Work Orders</h3>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label htmlFor="id" className="block text-sm font-medium text-gray-700 mb-1">
+            Order ID
+          </label>
           <input
             type="text"
-            name="building"
-            value={search.building || ""}
+            name="id"
+            id="id"
+            value={search.id || ''}
             onChange={onChange}
-            placeholder="Search by Building"
-            className="w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
+            placeholder="Search by order ID..."
+            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Enter full or partial order ID
+          </p>
         </div>
-      </div>
-      <div className="flex-1">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-            <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+
+        <div>
+          <label htmlFor="confinedSpaceNameOrId" className="block text-sm font-medium text-gray-700 mb-1">
+            Space Name/ID
+          </label>
           <input
             type="text"
             name="confinedSpaceNameOrId"
-            value={search.confinedSpaceNameOrId || ""}
+            id="confinedSpaceNameOrId"
+            value={search.confinedSpaceNameOrId || ''}
             onChange={onChange}
-            placeholder="Search by Space Name/ID"
-            className="w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
+            placeholder="Search by space name..."
+            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
           />
         </div>
-      </div>
-      <div className="sm:w-auto">
-        <button 
-          type="submit" 
-          className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all font-medium flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          Search
-        </button>
-      </div>
+        
+        
+        
+        <div>
+          <label htmlFor="dateOfSurvey" className="block text-sm font-medium text-gray-700 mb-1">
+            Survey Date
+          </label>
+          <input
+            type="date"
+            name="dateOfSurvey"
+            id="dateOfSurvey"
+            value={search.dateOfSurvey || ''}
+            onChange={onChange}
+            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-gray-500 focus:border-gray-500 sm:text-sm p-2 border"
+          />
+        </div>
+        
+        <div className="lg:col-span-2 flex items-end space-x-4">
+          <button
+            type="submit"
+            className="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-800 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            className="py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Clear
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
-);
+  );
+};
 
 export default WorkOrderSearch;

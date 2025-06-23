@@ -91,17 +91,27 @@ const UserTable = ({ users, loading }) => {
 // Location Card Component for Dashboard
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Filter orders based on search term
+    // Filter orders based on search term
   const filteredOrders = searchTerm.trim() ? 
     orders.filter(order => {
       const lowerCaseSearch = searchTerm.toLowerCase();
+      
+      // Prioritize exact or partial ID matches
+      if (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseSearch)) {
+        return true;
+      }
+      
+      // Also check database ID (partial matches)
+      if (order._id && order._id.toLowerCase().includes(lowerCaseSearch)) {
+        return true;
+      }
+      
+      // Fall back to other fields if no ID match
       return (
-        // Search by order ID (either unique ID or database ID)
-        (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseSearch)) ||
-        (order._id && order._id.toLowerCase().includes(lowerCaseSearch)) ||
         // Search by confined space name/ID
         (order.confinedSpaceNameOrId && order.confinedSpaceNameOrId.toLowerCase().includes(lowerCaseSearch)) ||
+        // Search by building
+        (order.building && order.building.toLowerCase().includes(lowerCaseSearch)) ||
         // Search by date
         (order.dateOfSurvey && order.dateOfSurvey.includes(lowerCaseSearch))
       );
@@ -188,20 +198,13 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                             : ''
                         }`}
                       >
-                        <td className="px-2 py-2 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className="font-medium text-gray-900 truncate max-w-[100px]">{order.confinedSpaceNameOrId}</span>
-                            <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
-                                  title={order.permitRequired ? "Permit Required" : "No Permit Required"}>
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                        
+                        <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
                           <div className="flex items-center">
                             <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                        <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
                           <div className="flex items-center">
                             <CalendarIcon className="mr-1 h-3 w-3 flex-shrink-0" />
                             <span className="truncate max-w-[80px]">{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>

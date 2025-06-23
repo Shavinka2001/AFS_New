@@ -117,12 +117,21 @@ export const deleteWorkOrder = async (id) => {
 // Search work orders
 export const searchWorkOrders = async (searchParams) => {
   try {
+    // Clean up empty search params
+    const cleanParams = {};
+    Object.keys(searchParams).forEach(key => {
+      if (searchParams[key] && searchParams[key].trim() !== '') {
+        cleanParams[key] = searchParams[key];
+      }
+    });
+    
     const response = await api.get('/search', {
-      params: searchParams,
+      params: cleanParams,
       headers: authHeader(),
     });
     return response.data;
   } catch (error) {
+    console.error('Error searching work orders:', error.response || error);
     throw new Error(error.response?.data?.message || 'Failed to search work orders');
   }
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getWorkOrders, deleteWorkOrder, searchWorkOrders } from '../../services/workOrderService';
 import WorkOrderTable from '../../components/admin/confined/WorkOrderTable';
 import WorkOrderModal from '../../components/admin/confined/WorkOrderModel';
@@ -14,6 +14,7 @@ const WorkOrderManagementPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
+  const searchTimeout = useRef(null);
   // State variables for delete confirmation modal
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
@@ -36,17 +37,84 @@ const WorkOrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
-
-  // Search handler
+  }, []);  // Search handlers
   const handleSearchChange = (e) => {
     const { name, value } = e.target;
-    setSearch(prev => ({ ...prev, [name]: value }));
+    const newSearch = { ...search, [name]: value };
+    setSearch(newSearch);
+    
+    // Implement dynamic search with debounce
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    
+    searchTimeout.current = setTimeout(() => {
+      // Special handling for ID search
+      if (name === 'id' || name === 'uniqueId') {
+        // If searching by ID, do a client-side filter first for better matching
+        if (value.trim()) {
+          const lowerCaseValue = value.toLowerCase();
+          
+          // First try to get all orders to ensure we have the full dataset
+          getWorkOrders().then(allOrders => {
+            // Filter orders that match the ID or uniqueId
+            const filteredOrders = allOrders.filter(order => 
+              (order._id && order._id.toLowerCase().includes(lowerCaseValue)) ||
+              (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseValue))
+            );
+            
+            setOrders(filteredOrders);
+            setLoading(false);
+          }).catch(err => {
+            console.error("Error fetching all orders for ID search:", err);
+            // Fallback to API search
+            fetchOrders(newSearch);
+          });
+        } else {
+          // If search field is empty, fetch all orders
+          fetchOrders({});
+        }
+      } else {
+        // For all other fields, use the regular search API
+        fetchOrders(newSearch);
+      }
+    }, 300); // 300ms debounce
   };
-
   const handleSearch = (e) => {
     e.preventDefault();
+    
+    // Special handling for ID searches to ensure better matching
+    if (search.id) {
+      const idValue = search.id.trim();
+      if (idValue) {
+        // Get all orders and do client-side filtering for better ID matching
+        setLoading(true);
+        getWorkOrders().then(allOrders => {
+          const filteredOrders = allOrders.filter(order => {
+            return (
+              (order._id && order._id.toLowerCase().includes(idValue.toLowerCase())) ||
+              (order.uniqueId && order.uniqueId.toLowerCase().includes(idValue.toLowerCase()))
+            );
+          });
+          
+          setOrders(filteredOrders);
+          setLoading(false);
+        }).catch(err => {
+          console.error("Error in manual search by ID:", err);
+          // Fallback to API search
+          fetchOrders(search);
+        });
+        return;
+      }
+    }
+    
+    // For other searches use the standard fetch
     fetchOrders(search);
+  };
+  
+  const clearSearch = () => {
+    setSearch({});
+    fetchOrders({});
   };
 
   // Modal handlers
@@ -106,14 +174,13 @@ const WorkOrderManagementPage = () => {
         {/* Alert Section */}
         <div className="mb-6 sm:mb-8">
           <WorkOrderAlert type={alert.type} message={alert.message} />
-        </div>
-
-        {/* Search Section */}
+        </div>        {/* Search Section */}
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
           <WorkOrderSearch 
             search={search} 
             onChange={handleSearchChange} 
             onSearch={handleSearch} 
+            onClear={clearSearch}
           />
         </div>
 
@@ -124,11 +191,11 @@ const WorkOrderManagementPage = () => {
               <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-gray-900"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <WorkOrderTable 
+            <div className="overflow-x-auto">              <WorkOrderTable 
                 orders={orders} 
                 onEdit={handleEdit} 
-                onDelete={handleDelete} 
+                onDelete={handleDelete}
+                searchParams={search}
               />
             </div>
           )}
