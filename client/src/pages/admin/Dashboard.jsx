@@ -133,8 +133,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
               {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[230px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
               <table className="min-w-full text-xs border-collapse table-fixed">
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {/* All orders in a single scrollable list */}
-                  {orders.map((order, index) => (                    <tr 
+                  {/* All orders in a single scrollable list */}                  {orders.map((order, index) => (                    <tr 
                       key={order._id || index} 
                       className="hover:bg-gray-50 transition-colors h-[46px]"
                     >
@@ -144,6 +143,11 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                           <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
                                 title={order.permitRequired ? "Permit Required" : "No Permit Required"}>
                           </span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                        <div className="flex items-center">
+                          <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
                         </div>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
