@@ -9,7 +9,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import UserDashboard from "./pages/user/UserDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import LocationManagement from "./pages/admin/LocationManagement";
-import WorkOrderManagement from "./pages/admin/workOrderManagement";
+import WorkOrderManagement from "./pages/admin/WorkOrdermanagement";
 import SessionTimeoutAlert from "./components/common/SessionTimeoutAlert";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdminRoute from "./components/common/AdminRoute";

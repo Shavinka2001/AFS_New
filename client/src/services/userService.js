@@ -44,6 +44,26 @@ api.interceptors.request.use(
     }
 );
 
+// Add a global axios interceptor for all requests in the app
+axios.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        // Check if unauthorized error from any API
+        if (error.response?.status === 401) {
+            // Only trigger logout if not already on login page
+            if (!window.location.pathname.includes('/login')) {
+                console.log('Global unauthorized access detected, logging out user automatically');
+                emitSessionTimeout();
+                // Use the logout function without navigate to force a redirect
+                logout();
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Session timeout handling
 let sessionTimer = null;
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 1 day in milliseconds
@@ -90,8 +110,17 @@ const logout = (navigate) => {
     
     // If navigate function is provided, use React Router navigation (preferred)
     if (navigate && typeof navigate === 'function') {
-        navigate('/login', { replace: true });
+        navigate('/login', { 
+            replace: true,
+            state: { 
+                message: 'Your session has expired. Please log in again.',
+                autoLogout: true 
+            } 
+        });
     } else {
+        // Store a session expiration message that login page can display
+        sessionStorage.setItem('authMessage', 'Your session has expired. Please log in again.');
+        
         // Fallback to direct URL change - use replace to prevent history issues
         window.location.replace('/login');
     }
@@ -159,6 +188,7 @@ api.interceptors.response.use(
                 return api(originalRequest);
             } catch (refreshError) {
                 // If refresh fails, logout user and notify about session timeout
+                console.log('Token refresh failed, logging out user automatically');
                 emitSessionTimeout();
                 logout();
                 return Promise.reject(refreshError);
@@ -167,6 +197,7 @@ api.interceptors.response.use(
         
         // If token is invalid or other 401 error
         if (error.response?.status === 401) {
+            console.log('Unauthorized access detected, logging out user automatically');
             emitSessionTimeout();
             logout();
         }
