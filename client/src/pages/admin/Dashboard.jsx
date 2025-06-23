@@ -90,31 +90,13 @@ const UserTable = ({ users, loading }) => {
 
 // Location Card Component for Dashboard
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-    // Filter orders based on search term
+  const [searchTerm, setSearchTerm] = useState('');  // Filter orders based on search term - only search by sequence number
   const filteredOrders = searchTerm.trim() ? 
-    orders.filter(order => {
-      const lowerCaseSearch = searchTerm.toLowerCase();
+    orders.filter((order, index) => {
+      const sequenceNumber = String(index + 1);
       
-      // Prioritize exact or partial ID matches
-      if (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseSearch)) {
-        return true;
-      }
-      
-      // Also check database ID (partial matches)
-      if (order._id && order._id.toLowerCase().includes(lowerCaseSearch)) {
-        return true;
-      }
-      
-      // Fall back to other fields if no ID match
-      return (
-        // Search by confined space name/ID
-        (order.confinedSpaceNameOrId && order.confinedSpaceNameOrId.toLowerCase().includes(lowerCaseSearch)) ||
-        // Search by building
-        (order.building && order.building.toLowerCase().includes(lowerCaseSearch)) ||
-        // Search by date
-        (order.dateOfSurvey && order.dateOfSurvey.includes(lowerCaseSearch))
-      );
+      // Search only by exact sequence number match
+      return sequenceNumber === searchTerm;
     }) : orders;
 
   return (
@@ -149,10 +131,9 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                   <svg className="h-3 w-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                </div>
-                <input
+                </div>                <input
                   type="text"
-                  placeholder="Search by ID, name, or date..."
+                  placeholder="Search by sequence number (1, 2, 3...)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-2 py-1.5 pl-7 pr-8 text-xs rounded-md border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none bg-transparent"
@@ -187,13 +168,16 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
               {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[180px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
               <table className="min-w-full text-xs border-collapse table-fixed">
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {/* Display filtered orders */}                  {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order, index) => (                      <tr 
-                        key={order._id || index} 
+                  {/* Display filtered orders */}                  {filteredOrders.length > 0 ? (                    filteredOrders.map((order) => {
+                      // Find the original index of this order in the unfiltered array
+                      const originalIndex = orders.findIndex(o => o._id === order._id);
+                      const sequenceNumber = originalIndex + 1;
+                      
+                      return (
+                      <tr 
+                        key={order._id || originalIndex} 
                         className={`hover:bg-gray-50 transition-colors h-[46px] ${
-                          searchTerm && 
-                          (order.uniqueId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           order._id?.toLowerCase().includes(searchTerm.toLowerCase()))
+                          searchTerm && String(sequenceNumber) === searchTerm
                             ? 'bg-blue-50'
                             : ''
                         }`}
@@ -201,7 +185,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                         
                         <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
                           <div className="flex items-center">
-                            <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
+                            <span className="font-mono text-gray-900">#{sequenceNumber}</span>
                           </div>
                         </td>
                         <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
@@ -241,9 +225,8 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                               </svg>
                             </button>
                           </div>                      
-                        </td>                    
-                      </tr>
-                    ))
+                        </td>                      </tr>
+                    )})
                   ) : (
                     <tr>
                       <td colSpan="4" className="px-2 py-4 text-center text-xs text-gray-500">
@@ -447,6 +430,15 @@ export default function Dashboard() {
       second: "2-digit"
     })
   })
+  const [locationSearchTerm, setLocationSearchTerm] = useState('');
+  
+  // Filter locations based on search term
+  const filteredLocations = locationSearchTerm.trim() 
+    ? Object.values(workOrdersByLocation).filter(entry => 
+        entry.location.name.toLowerCase().includes(locationSearchTerm.toLowerCase()) ||
+        entry.location.address.toLowerCase().includes(locationSearchTerm.toLowerCase())
+      )
+    : Object.values(workOrdersByLocation);
   // Define fetchData function outside useEffect to make it reusable
   const fetchData = async () => {
     setLoading(true)
@@ -796,8 +788,10 @@ export default function Dashboard() {
         }
       });
       
-      // Add images section if available
-      if (order.pictures && order.pictures.length > 0) {
+      // Add images section if available      // First check for pictures in order.pictures (from backend storage)
+      // Then check for images in order.images (from frontend upload)      const orderImages = order.pictures || order.images || [];
+      
+      if (orderImages && orderImages.length > 0) {
         // Add a new page for images if we're running out of space
         if (currentY > doc.internal.pageSize.getHeight() - 100) {
           doc.addPage();
@@ -812,16 +806,19 @@ export default function Dashboard() {
         // Track the promises for image loading
         const imagePromises = [];
         const imgInfos = [];
-        
-        // Prepare image loading for all images
-        for (let i = 0; i < order.pictures.length; i++) {
-          const imgPath = order.pictures[i];
-          const imageUrl = imgPath.startsWith('http') 
-            ? imgPath 
-            : `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}`;
+          // Prepare image loading for all images        for (let i = 0; i < orderImages.length; i++) {
+          const imgPath = orderImages[i];
+          // Handle different image formats: URL string, base64 data, or relative path
+          const imageUrl = typeof imgPath === 'string' ? 
+            (imgPath.startsWith('data:') ? 
+              imgPath : // Already base64
+              imgPath.startsWith('http') ? 
+                imgPath : // Already full URL
+                `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}` // Relative path
+            ) : 
+            imgPath; // Some other format, hope for the best
           
-          const promise = new Promise((resolve, reject) => {
-            const img = new Image();
+          const promise = new Promise((resolve, reject) => {            const img = new Image();
             img.crossOrigin = "Anonymous";
             img.onload = () => {
               const canvas = document.createElement('canvas');
@@ -830,8 +827,8 @@ export default function Dashboard() {
               // Set canvas dimensions proportional to image
               let imgWidth = img.width;
               let imgHeight = img.height;
-              const maxWidth = 170;
-              const maxHeight = 120;
+              const maxWidth = 170; // Increased from 170
+              const maxHeight = 120; // Increased from 120
               
               // Resize image to fit within maximum dimensions while maintaining aspect ratio
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
@@ -840,14 +837,24 @@ export default function Dashboard() {
                 imgHeight *= ratio;
               }
               
-              canvas.width = imgWidth;
-              canvas.height = imgHeight;
+              // Set high resolution canvas with 2x density for better quality
+              canvas.width = imgWidth * 2;
+              canvas.height = imgHeight * 2;
+              canvas.style.width = imgWidth + "px";
+              canvas.style.height = imgHeight + "px";
               
-              // Draw image on canvas
+              // Scale context for high-res rendering
+              ctx.scale(2, 2);
+              
+              // Improve image quality with better rendering
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = "high";
+              
+              // Draw image on canvas with better quality
               ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
               
-              // Get image data as base64
-              const dataUrl = canvas.toDataURL('image/jpeg');
+              // Get image data as base64 with higher quality
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // Increased quality from default 0.92
               
               // Store image info for adding to PDF
               imgInfos.push({
@@ -875,8 +882,7 @@ export default function Dashboard() {
         await Promise.all(imagePromises);
         
         // Add images to PDF once loaded
-        if (imgInfos.length > 0) {
-          // Define dimensions
+        if (imgInfos.length > 0) {          // Define dimensions
           const marginLeft = 14;
           const marginRight = 14;
           const pageWidth = doc.internal.pageSize.getWidth();
@@ -926,8 +932,6 @@ export default function Dashboard() {
           doc.text("No images available", marginLeft, currentY + 10);
           currentY += 20;
         }
-      }
-
       // Add signature section
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
@@ -1033,8 +1037,7 @@ export default function Dashboard() {
             icon={<LocationIcon className="text-white w-6 h-6" />}
             trend="With work orders"
           />
-        </div>        {/* Work Orders by Location Section */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
+        </div>        {/* Work Orders by Location Section */}        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 rounded-t-xl">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
               <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
@@ -1052,15 +1055,55 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="p-6 lg:p-8">
-            <WorkOrderLocationGrid 
-              workOrdersByLocation={workOrdersByLocation} 
-              loading={orderLoading || locationLoading}
-              onViewOrder={handleViewOrder}
-              onEditOrder={handleEditOrder} 
-              onAddOrder={handleAddWorkOrder}
-              onDeleteOrder={handleDeleteOrder}
-              downloadSinglePDF={downloadSinglePDF}
-            />
+            {/* Search bar for locations */}
+            <div className="mb-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search locations by name or address..."
+                  value={locationSearchTerm}
+                  onChange={(e) => setLocationSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none"
+                />
+                {locationSearchTerm && (
+                  <button 
+                    onClick={() => setLocationSearchTerm('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {locationSearchTerm && filteredLocations.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <LocationIcon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 text-lg font-medium">No locations found</p>
+                <p className="text-gray-400 text-sm max-w-md mx-auto mt-2">
+                  No locations match your search term "{locationSearchTerm}"
+                </p>
+              </div>
+            ) : (
+              <WorkOrderLocationGrid 
+                workOrdersByLocation={Object.fromEntries(
+                  filteredLocations.map(entry => [entry.location._id, entry])
+                )}
+                loading={orderLoading || locationLoading}
+                onViewOrder={handleViewOrder}
+                onEditOrder={handleEditOrder} 
+                onAddOrder={handleAddWorkOrder}
+                onDeleteOrder={handleDeleteOrder}
+                downloadSinglePDF={downloadSinglePDF}
+              />
+            )}
           </div>
         </div>
           {/* Work Order Modal would be imported from your components */}

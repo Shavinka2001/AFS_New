@@ -191,8 +191,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
           currentY = data.cursor.y + 10;
         }
       });
-      
-      // Add images section if available
+        // Add images section if available
       // First check for pictures in order.pictures (from backend storage)
       // Then check for images in order.images (from frontend upload)
       const orderImages = order.pictures || order.images || [];
@@ -215,8 +214,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
         
         // Prepare image loading for all images
         for (let i = 0; i < orderImages.length; i++) {
-          const imgPath = orderImages[i];
-          // Handle different image formats: URL string, base64 data, or relative path
+          const imgPath = orderImages[i];          // Handle different image formats: URL string, base64 data, or relative path
           const imageUrl = typeof imgPath === 'string' ? 
             (imgPath.startsWith('data:') ? 
               imgPath : // Already base64
@@ -226,18 +224,15 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
             ) : 
             imgPath; // Some other format, hope for the best
           
-          const promise = new Promise((resolve, reject) => {
-            const img = new Image();
+          const promise = new Promise((resolve, reject) => {            const img = new Image();
             img.crossOrigin = "Anonymous";
             img.onload = () => {
               const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              
-              // Set canvas dimensions proportional to image
+              const ctx = canvas.getContext('2d');              // Set canvas dimensions proportional to image
               let imgWidth = img.width;
               let imgHeight = img.height;
-              const maxWidth = 170;
-              const maxHeight = 120;
+              const maxWidth = 100; // Further decreased for smaller vertical layout
+              const maxHeight = 80; // Further decreased for smaller vertical layout
               
               // Resize image to fit within maximum dimensions while maintaining aspect ratio
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
@@ -246,14 +241,24 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                 imgHeight *= ratio;
               }
               
-              canvas.width = imgWidth;
-              canvas.height = imgHeight;
+              // Set high resolution canvas with 2x density for better quality
+              canvas.width = imgWidth * 2;
+              canvas.height = imgHeight * 2;
+              canvas.style.width = imgWidth + "px";
+              canvas.style.height = imgHeight + "px";
               
-              // Draw image on canvas
+              // Scale context for high-res rendering
+              ctx.scale(2, 2);
+              
+              // Improve image quality with better rendering
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = "high";
+              
+              // Draw image on canvas with better quality
               ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
               
-              // Get image data as base64
-              const dataUrl = canvas.toDataURL('image/jpeg');
+              // Get image data as base64 with higher quality
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // Increased quality from default 0.92
               
               // Store image info for adding to PDF
               imgInfos.push({
@@ -291,17 +296,25 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
           let xPos = marginLeft;
           let yPos = currentY;
           const spaceBetweenImages = 10;
-          
-          // Add each image
+            // Add each image
           for (let i = 0; i < imgInfos.length; i++) {
             const imgInfo = imgInfos[i];
-            
-            // Check if we need to add a new row
-            if (i > 0 && i % 2 === 0) {
-              yPos += imgInfo.height + spaceBetweenImages;
-              xPos = marginLeft;
-            } else if (i > 0) {
+              // Check if we need to add a new column or stay vertically aligned
+            if (i > 0 && i % 2 === 0) {  // 2 columns of images
+              // Move to next column
               xPos = marginLeft + availableWidth / 2;
+              
+              // If we're at an even multiple of 4, start a new row
+              if (i % 4 === 0) {
+                xPos = marginLeft;
+                yPos += imgInfo.height + spaceBetweenImages + 15; // Added extra space for captions
+              } else {
+                // Reset Y position to beginning of this set of 2 vertical images
+                yPos = yPos - (imgInfo.height + spaceBetweenImages + 15);
+              }
+            } else if (i > 0) {
+              // Move down in the same column
+              yPos += imgInfo.height + spaceBetweenImages + 15;
             }
             
             // Check if we need a new page
@@ -312,12 +325,17 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
             }
             
             try {
+              // Add a light border around the image
+              doc.setDrawColor(200, 200, 200);
+              doc.setLineWidth(0.5);
+              doc.rect(xPos - 2, yPos - 2, imgInfo.width + 4, imgInfo.height + 4);
+              
               // Add the image
               doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
               
-              // Add image number below the image
-              doc.setFontSize(8);
-              doc.setFont(undefined, 'normal');
+              // Add image number below the image with better formatting
+              doc.setFontSize(9);
+              doc.setFont(undefined, 'bold');
               doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
             } catch (imgError) {
               console.error('Error adding image to PDF:', imgError);
@@ -407,7 +425,6 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Surveyors</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Space Name/ID</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">Building</th>
-                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Images</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Permit Required</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
@@ -431,27 +448,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 hidden md:table-cell">
                     <div className="text-sm text-gray-900">{order.building}</div>
                   </td>
-                  <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 hidden sm:table-cell">
-                    <div className="flex -space-x-2">                      {order.pictures?.slice(0, 3).map((image, index) => (
-                        <div 
-                          key={index}
-                          className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white overflow-hidden cursor-pointer hover:z-10 shadow-sm"
-                          onClick={() => setSelectedImage(image)}
-                        >
-                          <img
-                            src={image}
-                            alt={`Image ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                      {order.pictures?.length > 3 && (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-900 shadow-sm">
-                          +{order.pictures.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  </td>
+              
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
                     <span className={`px-3 sm:px-4 py-1 sm:py-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       order.permitRequired 
