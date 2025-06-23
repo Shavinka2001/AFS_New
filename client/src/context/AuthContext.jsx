@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }) => {
       isMounted = false;
     };
   }, []); // Only run on component mount
+
   // Handle user logout
   const handleLogout = (showMessage = true) => {
     logout(navigate);

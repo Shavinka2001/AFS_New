@@ -274,8 +274,15 @@ function TechnicianDashboard() {
         setDeleteConfirmModal({ isOpen: false, title: '', message: '', orderId: null });
     };// State to prevent duplicate form submissions
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const handleWorkOrderSubmit = async (formData) => {
+      const handleWorkOrderSubmit = async (formData, savedResponse) => {
+        // If we received a response directly, the save was already completed by WorkOrderModal component
+        if (savedResponse) {
+            setShowWorkOrderModal(false);
+            await fetchWorkOrders();
+            setIsSubmitting(false);
+            return;
+        }
+        
         // Check if already submitting
         if (isSubmitting) {
             toast.info("Your request is being processed, please wait...");
@@ -322,10 +329,9 @@ function TechnicianDashboard() {
                 warningSignPosted: Boolean(formData.warningSignPosted),
                 otherPeopleWorkingNearSpace: Boolean(formData.otherPeopleWorkingNearSpace),
                 canOthersSeeIntoSpace: Boolean(formData.canOthersSeeIntoSpace),
-                contractorsEnterSpace: Boolean(formData.contractorsEnterSpace),
-                numberOfEntryPoints: formData.numberOfEntryPoints ? Number(formData.numberOfEntryPoints) : 0,
+                contractorsEnterSpace: Boolean(formData.contractorsEnterSpace),                numberOfEntryPoints: formData.numberOfEntryPoints ? Number(formData.numberOfEntryPoints) : 0,
                 notes: formData.notes || '',
-                images: Array.isArray(formData.images) ? formData.images : []
+                pictures: Array.isArray(formData.pictures) ? formData.pictures : []
             };
 
             let response;
@@ -744,7 +750,7 @@ function TechnicianDashboard() {
                         setShowWorkOrderModal(false);
                         setSelectedWorkOrder(null);
                     }}
-                    onSubmit={handleWorkOrderSubmit}
+                    onSubmit={(responseData) => handleWorkOrderSubmit(null, responseData)}
                     order={selectedWorkOrder}
                     isEdit={!!selectedWorkOrder}
                     assignedLocationData={assignedLocations.length === 1 ? assignedLocations[0] : null}

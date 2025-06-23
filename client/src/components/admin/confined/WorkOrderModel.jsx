@@ -35,9 +35,8 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     otherPeopleWorkingNearSpace: false,
     canOthersSeeIntoSpace: false,
     contractorsEnterSpace: false,
-    numberOfEntryPoints: "",
-    notes: "",
-    images: []
+    numberOfEntryPoints: "",    notes: "",
+    pictures: []
   });
     // State for user's assigned locations
   const [assignedLocations, setAssignedLocations] = useState([]);
@@ -211,8 +210,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         [name]: value
       }));
     }
-  };
-  const handleImageUpload = (e) => {
+  };  const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     
     // Check if adding these files would exceed the 3-image limit
@@ -237,9 +235,10 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         reader.onloadend = () => {
           newPreviewImages.push(reader.result);
           setPreviewImages(prev => [...prev, reader.result]);
+            // Store the actual file in formData.pictures for sending to server
           setFormData(prev => ({
             ...prev,
-            images: [...(prev.images || []), file]
+            pictures: [...(prev.pictures || []), file]
           }));
         };
         reader.readAsDataURL(file);
@@ -247,16 +246,15 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         toast.error('Please upload only image files (PNG, JPG or JPEG)');
       }
     });
-  };  const removeImage = (index) => {
+  };const removeImage = (index) => {
     // Remove from preview images
     const newPreviewImages = previewImages.filter((_, i) => i !== index);
     setPreviewImages(newPreviewImages);
-    
-    // Remove from form data images
-    const newImages = formData.images ? formData.images.filter((_, i) => i !== index) : [];
+      // Remove from form data pictures
+    const newImages = formData.pictures ? formData.pictures.filter((_, i) => i !== index) : [];
     setFormData(prev => ({
       ...prev,
-      images: newImages
+      pictures: newImages
     }));
     
     toast.info('Image removed');
@@ -324,11 +322,10 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         .then(res => res.blob())
         .then(blob => {
           const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          
-          // Update form data with new image
+            // Update form data with new image
           setFormData(prev => ({
             ...prev,
-            images: [...(prev.images || []), file]
+            pictures: [...(prev.pictures || []), file]
           }));
         });
       
@@ -354,8 +351,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       }
     };
   }, [stream]);
-  
-  const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -372,10 +368,19 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         userId,
         surveyors: [technicianName], // Set surveyors as an array with technician name
         dateOfSurvey: formData.dateOfSurvey ? new Date(formData.dateOfSurvey).toISOString() : new Date().toISOString(),
-      };
-
-      if (onSubmit) {
-        await onSubmit(dataToSubmit);
+      };      // Process the form submission - handle direct API calls here
+      let result;
+      if (isEdit && order?._id) {
+        // Update existing order
+        result = await updateWorkOrder(order._id, dataToSubmit);
+        toast.success("Work order updated successfully!");
+      } else {
+        // Create new order
+        result = await createWorkOrder(dataToSubmit);
+        toast.success("Work order created successfully!");
+      }
+        if (onSubmit) {
+        onSubmit(result);
       }
 
       onClose();

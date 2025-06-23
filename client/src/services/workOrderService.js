@@ -36,9 +36,41 @@ export const createWorkOrder = async (orderData) => {
       }
     }
     
-    const response = await api.post('/', orderData, {
-      headers: authHeader(),
+    // Create a FormData object for file uploads
+    const formData = new FormData();
+      // Add all regular fields to formData
+    Object.keys(orderData).forEach(key => {
+      if (key !== 'pictures') {
+        // Handle arrays and booleans
+        if (Array.isArray(orderData[key])) {
+          orderData[key].forEach((item) => formData.append(key, item));
+        } else if (typeof orderData[key] === 'boolean') {
+          formData.append(key, orderData[key].toString());
+        } else if (orderData[key] !== null && orderData[key] !== undefined) {
+          formData.append(key, orderData[key]);
+        }
+      }
+    });    // Add pictures if they exist (for file uploads, use "images" as field name for multer)
+    if (orderData.pictures && orderData.pictures.length > 0) {
+      orderData.pictures.forEach((image, index) => {
+        // If it's a File object, add it directly
+        if (image instanceof File) {
+          formData.append('images', image); // Field name "images" will be handled by multer as defined in routes
+        } 
+        // If it's a string (URL), we need to handle it differently
+        else if (typeof image === 'string') {
+          formData.append('existingPictures', image);
+        }
+      });
+    }
+    
+    const response = await axios.post(API_URL, formData, {
+      headers: {
+        ...authHeader(),
+        'Content-Type': 'multipart/form-data', // Important for file uploads
+      },
     });
+    
     console.log('Create work order response:', response.data); // Debug log
     return response.data;
   } catch (error) {
@@ -93,11 +125,61 @@ export const getWorkOrderById = async (id) => {
 // Update a work order
 export const updateWorkOrder = async (id, orderData) => {
   try {
-    const response = await api.put(`/${id}`, orderData, {
-      headers: authHeader(),
+    console.log('Updating work order with data:', orderData); // Debug log
+    
+    // Create a FormData object for file uploads
+    const formData = new FormData();
+      // Add all regular fields to formData
+    Object.keys(orderData).forEach(key => {
+      if (key !== 'pictures') {
+        // Handle arrays and booleans
+        if (Array.isArray(orderData[key])) {
+          orderData[key].forEach((item) => {
+            if (item !== null && item !== undefined) {
+              formData.append(key, item);
+            }
+          });
+        } else if (typeof orderData[key] === 'boolean') {
+          formData.append(key, orderData[key].toString());
+        } else if (orderData[key] !== null && orderData[key] !== undefined) {
+          formData.append(key, orderData[key]);
+        }
+      }
     });
+      // Handle pictures
+    if (orderData.pictures && orderData.pictures.length > 0) {
+      let hasNewImages = false;
+      const existingImagePaths = [];
+      
+      orderData.pictures.forEach((image, index) => {
+        // Check if it's a File object (new upload)
+        if (image instanceof File) {
+          hasNewImages = true;
+          formData.append('images', image);
+        }
+        // If it's a string URL (existing image path)
+        else if (typeof image === 'string') {
+          existingImagePaths.push(image);
+        }
+      });
+      
+      // If we have existing image paths, add them as a JSON string
+      if (existingImagePaths.length > 0) {
+        formData.append('pictures', JSON.stringify(existingImagePaths));
+      }
+    }
+    
+    const response = await axios.put(`${API_URL}/${id}`, formData, {
+      headers: {
+        ...authHeader(),
+        'Content-Type': 'multipart/form-data', // Important for file uploads
+      },
+    });
+    
+    console.log('Update work order response:', response.data); // Debug log
     return response.data;
   } catch (error) {
+    console.error('Error updating work order:', error.response || error); // Debug log
     throw new Error(error.response?.data?.message || 'Failed to update work order');
   }
 };

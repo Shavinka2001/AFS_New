@@ -281,8 +281,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                     <div className="text-sm text-gray-900">{order.building}</div>
                   </td>
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 hidden sm:table-cell">
-                    <div className="flex -space-x-2">
-                      {order.images?.slice(0, 3).map((image, index) => (
+                    <div className="flex -space-x-2">                      {order.pictures?.slice(0, 3).map((image, index) => (
                         <div 
                           key={index}
                           className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white overflow-hidden cursor-pointer hover:z-10 shadow-sm"
@@ -295,9 +294,9 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                           />
                         </div>
                       ))}
-                      {order.images?.length > 3 && (
+                      {order.pictures?.length > 3 && (
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-900 shadow-sm">
-                          +{order.images.length - 3}
+                          +{order.pictures.length - 3}
                         </div>
                       )}
                     </div>
