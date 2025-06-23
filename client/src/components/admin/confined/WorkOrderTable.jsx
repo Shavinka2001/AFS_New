@@ -1,9 +1,37 @@
 import React, { useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { format } from 'date-fns';
 
-const WorkOrderTable = ({ orders = [], onEdit, onDelete }) => {
+const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) => {
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // Function to determine if this row should be highlighted based on search params
+  const isHighlighted = (order) => {
+    if (!Object.keys(searchParams).length) return false;
+    
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value && value.trim() !== '') {
+        const lowerValue = value.toLowerCase();
+        
+        if (key === 'uniqueId' && order.uniqueId && order.uniqueId.toLowerCase().includes(lowerValue)) {
+          return true;
+        }
+        
+        if (key === 'confinedSpaceNameOrId' && order.confinedSpaceNameOrId && 
+            order.confinedSpaceNameOrId.toLowerCase().includes(lowerValue)) {
+          return true;
+        }
+        
+        if (key === 'building' && order.building && 
+            order.building.toLowerCase().includes(lowerValue)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
 
   const downloadSinglePDF = (order) => {
     try {
@@ -196,13 +224,34 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete }) => {
   const handleEdit = onEdit || (() => {});
   const handleDelete = onDelete || (() => {});
 
+  // Function to highlight matching text in table cells
+  const highlightMatch = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+    
+    const lowerText = String(text).toLowerCase();
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    if (!lowerText.includes(lowerSearchTerm)) return text;
+    
+    const startIndex = lowerText.indexOf(lowerSearchTerm);
+    const endIndex = startIndex + searchTerm.length;
+    
+    return (
+      <>
+        {text.substring(0, startIndex)}
+        <span className="bg-yellow-200 font-medium">{text.substring(startIndex, endIndex)}</span>
+        {text.substring(endIndex)}
+      </>
+    );
+  };
+  
   return (
     <>
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
-              <tr>
+              <tr>                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Order ID</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Survey Date</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Surveyors</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Space Name/ID</th>
@@ -214,7 +263,11 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {orders.map(order => (
-                <tr key={order._id} className="hover:bg-gray-50 transition-colors duration-200">
+                <tr key={order._id} className={`hover:bg-gray-50 transition-colors duration-200 ${isHighlighted(order) ? 'bg-yellow-50' : ''}`}>                  <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{searchParams?.id ? 
+                        highlightMatch(order.uniqueId || order._id?.slice(-4).padStart(4, '0'), searchParams.id) : 
+                        (order.uniqueId || order._id?.slice(-4).padStart(4, '0'))}</div>
+                  </td>
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{order.dateOfSurvey?.slice(0,10)}</div>
                   </td>
