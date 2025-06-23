@@ -90,6 +90,23 @@ const UserTable = ({ users, loading }) => {
 
 // Location Card Component for Dashboard
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filter orders based on search term
+  const filteredOrders = searchTerm.trim() ? 
+    orders.filter(order => {
+      const lowerCaseSearch = searchTerm.toLowerCase();
+      return (
+        // Search by order ID (either unique ID or database ID)
+        (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseSearch)) ||
+        (order._id && order._id.toLowerCase().includes(lowerCaseSearch)) ||
+        // Search by confined space name/ID
+        (order.confinedSpaceNameOrId && order.confinedSpaceNameOrId.toLowerCase().includes(lowerCaseSearch)) ||
+        // Search by date
+        (order.dateOfSurvey && order.dateOfSurvey.includes(lowerCaseSearch))
+      );
+    }) : orders;
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md h-[320px] flex flex-col w-full relative">
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
@@ -115,7 +132,34 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
             <p className="text-xs text-gray-500">No work orders</p>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">            {/* Search input for orders within this location */}
+            <div className="mb-2">
+              <div className="relative bg-gray-50 rounded-md">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <svg className="h-3 w-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by ID, name, or date..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-2 py-1.5 pl-7 pr-8 text-xs rounded-md border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none bg-transparent"
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            
             {/* Header for table */}            <div className="bg-gray-50 sticky top-0 z-10 rounded-t-md">
               <table className="min-w-full text-xs border-collapse table-fixed">
                 <thead>                  <tr className="text-xs">
@@ -130,66 +174,85 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                     </th>
                   </tr>
                 </thead>              </table>            </div>
-              {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[230px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
+              {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[180px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
               <table className="min-w-full text-xs border-collapse table-fixed">
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {/* All orders in a single scrollable list */}                  {orders.map((order, index) => (                    <tr 
-                      key={order._id || index} 
-                      className="hover:bg-gray-50 transition-colors h-[46px]"
-                    >
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="font-medium text-gray-900 truncate max-w-[100px]">{order.confinedSpaceNameOrId}</span>
-                          <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
-                                title={order.permitRequired ? "Permit Required" : "No Permit Required"}>
-                          </span>
+                  {/* Display filtered orders */}                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map((order, index) => (                      <tr 
+                        key={order._id || index} 
+                        className={`hover:bg-gray-50 transition-colors h-[46px] ${
+                          searchTerm && 
+                          (order.uniqueId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           order._id?.toLowerCase().includes(searchTerm.toLowerCase()))
+                            ? 'bg-blue-50'
+                            : ''
+                        }`}
+                      >
+                        <td className="px-2 py-2 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-900 truncate max-w-[100px]">{order.confinedSpaceNameOrId}</span>
+                            <span className={`ml-1.5 inline-flex h-2 w-2 rounded-full ${order.permitRequired ? 'bg-amber-500' : 'bg-green-500'}`} 
+                                  title={order.permitRequired ? "Permit Required" : "No Permit Required"}>
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <CalendarIcon className="mr-1 h-3 w-3 flex-shrink-0" />
+                            <span className="truncate max-w-[80px]">{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap text-right">
+                          <div className="flex justify-end space-x-1">
+                            <button 
+                              onClick={() => onViewOrder(order)} 
+                              className="p-1 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
+                              title="View Order"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => downloadSinglePDF(order)}
+                              className="p-1 rounded text-gray-600 hover:bg-gray-50 transition-colors"
+                              title="Download PDF"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => onDeleteOrder(order._id)} 
+                              className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete Order"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>                      
+                        </td>                    
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="px-2 py-4 text-center text-xs text-gray-500">
+                        <div className="flex flex-col items-center justify-center">
+                          <svg className="h-4 w-4 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          No matching orders found
                         </div>
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <CalendarIcon className="mr-1 h-3 w-3 flex-shrink-0" />
-                          <span className="truncate max-w-[80px]">{order.dateOfSurvey?.slice(0, 10) || "No date"}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-right">
-                        <div className="flex justify-end space-x-1">
-                          <button 
-                            onClick={() => onViewOrder(order)} 
-                            className="p-1 rounded text-blue-600 hover:bg-blue-50 transition-colors" 
-                            title="View Order"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => downloadSinglePDF(order)}
-                            className="p-1 rounded text-gray-600 hover:bg-gray-50 transition-colors"
-                            title="Download PDF"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
-                          <button 
-                            onClick={() => onDeleteOrder(order._id)} 
-                            className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
-                            title="Delete Order"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>                      
-                      </td>                    
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -211,7 +274,8 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
 };
 
 // Dashboard Work Order Grid Component
-const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {  if (loading) {
+const WorkOrderLocationGrid = ({ workOrdersByLocation, loading, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
+  if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {[...Array(2)].map((_, i) => (          <div key={i} className="h-[420px] bg-gray-100 rounded-xl animate-pulse flex flex-col">

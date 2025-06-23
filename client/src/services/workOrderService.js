@@ -20,6 +20,22 @@ const authHeader = () => {
 export const createWorkOrder = async (orderData) => {
   try {
     console.log('Creating work order with data:', orderData); // Debug log
+    
+    // Generate a unique ID with pattern 0001, 0002, etc. if not provided
+    if (!orderData.uniqueId) {
+      try {
+        // Get current orders to determine next ID
+        const currentOrders = await getWorkOrders();
+        const nextNumber = (currentOrders?.length || 0) + 1;
+        // Format as 4-digit number with leading zeros
+        orderData.uniqueId = String(nextNumber).padStart(4, '0');
+      } catch (err) {
+        console.error('Error generating unique ID:', err);
+        // Fallback to timestamp-based ID
+        orderData.uniqueId = new Date().getTime().toString().slice(-4).padStart(4, '0');
+      }
+    }
+    
     const response = await api.post('/', orderData, {
       headers: authHeader(),
     });
