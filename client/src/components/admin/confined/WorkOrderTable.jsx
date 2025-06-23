@@ -31,9 +31,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
     }
     
     return false;
-  };
-
-  const downloadSinglePDF = (order) => {
+  };  const downloadSinglePDF = async (order) => {
     try {
       const doc = new jsPDF();
       
@@ -57,9 +55,9 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text("1. LOCATION INFORMATION", 14, 50);
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-
+      
+      let currentY = 55;
+      
       const locationInfo = [
         ['Space Name/ID:', order.confinedSpaceNameOrId || 'N/A'],
         ['Building:', order.building || 'N/A'],
@@ -69,22 +67,24 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
 
       autoTable(doc, {
         body: locationInfo,
-        startY: 55,
+        startY: currentY,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
 
       // Section 2: Space Classification
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text("2. SPACE CLASSIFICATION", 14, doc.lastAutoTable.finalY + 10);
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-
+      doc.text("2. SPACE CLASSIFICATION", 14, currentY);
+      currentY += 5;
+      
       const spaceClassification = [
         ['Is this a Confined Space:', order.confinedSpace ? '☒ Yes' : '☐ No'],
         ['Permit Required:', order.permitRequired ? '☒ Yes' : '☐ No'],
@@ -93,22 +93,24 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
 
       autoTable(doc, {
         body: spaceClassification,
-        startY: doc.lastAutoTable.finalY + 15,
+        startY: currentY + 5,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
 
       // Section 3: Hazard Assessment
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text("3. HAZARD ASSESSMENT", 14, doc.lastAutoTable.finalY + 10);
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-
+      doc.text("3. HAZARD ASSESSMENT", 14, currentY);
+      currentY += 5;
+      
       const hazardsAssessment = [
         ['Atmospheric Hazard:', order.atmosphericHazard ? '☒ Yes' : '☐ No'],
         ['Description:', order.atmosphericHazardDescription || 'N/A'],
@@ -122,22 +124,24 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
 
       autoTable(doc, {
         body: hazardsAssessment,
-        startY: doc.lastAutoTable.finalY + 15,
+        startY: currentY + 5,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
 
       // Section 4: Safety Measures
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text("4. SAFETY MEASURES", 14, doc.lastAutoTable.finalY + 10);
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-
+      doc.text("4. SAFETY MEASURES", 14, currentY);
+      currentY += 5;
+      
       const safetyMeasures = [
         ['PPE Required:', order.ppeRequired ? '☒ Yes' : '☐ No'],
         ['PPE List:', order.ppeList || 'N/A'],
@@ -149,22 +153,24 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
 
       autoTable(doc, {
         body: safetyMeasures,
-        startY: doc.lastAutoTable.finalY + 15,
+        startY: currentY + 5,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
 
       // Section 5: Additional Information
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text("5. ADDITIONAL INFORMATION", 14, doc.lastAutoTable.finalY + 10);
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-
+      doc.text("5. ADDITIONAL INFORMATION", 14, currentY);
+      currentY += 5;
+      
       const additionalInfo = [
         ['Other People Working Near Space:', order.otherPeopleWorkingNearSpace ? '☒ Yes' : '☐ No'],
         ['Can Others See into Space:', order.canOthersSeeIntoSpace ? '☒ Yes' : '☐ No'],
@@ -174,25 +180,170 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
 
       autoTable(doc, {
         body: additionalInfo,
-        startY: doc.lastAutoTable.finalY + 15,
+        startY: currentY + 5,
         styles: { fontSize: 10 },
         columnStyles: {
           0: { cellWidth: 60, fontStyle: 'bold' },
           1: { cellWidth: 130 }
         },
-        theme: 'grid'
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
       });
+      
+      // Add images section if available
+      // First check for pictures in order.pictures (from backend storage)
+      // Then check for images in order.images (from frontend upload)
+      const orderImages = order.pictures || order.images || [];
+      
+      if (orderImages && orderImages.length > 0) {
+        // Add a new page for images if we're running out of space
+        if (currentY > doc.internal.pageSize.getHeight() - 100) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text("CONFINED SPACE IMAGES", 14, currentY);
+        currentY += 10;
+        
+        // Track the promises for image loading
+        const imagePromises = [];
+        const imgInfos = [];
+        
+        // Prepare image loading for all images
+        for (let i = 0; i < orderImages.length; i++) {
+          const imgPath = orderImages[i];
+          // Handle different image formats: URL string, base64 data, or relative path
+          const imageUrl = typeof imgPath === 'string' ? 
+            (imgPath.startsWith('data:') ? 
+              imgPath : // Already base64
+              imgPath.startsWith('http') ? 
+                imgPath : // Already full URL
+                `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}` // Relative path
+            ) : 
+            imgPath; // Some other format, hope for the best
+          
+          const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              // Set canvas dimensions proportional to image
+              let imgWidth = img.width;
+              let imgHeight = img.height;
+              const maxWidth = 170;
+              const maxHeight = 120;
+              
+              // Resize image to fit within maximum dimensions while maintaining aspect ratio
+              if (imgWidth > maxWidth || imgHeight > maxHeight) {
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                imgWidth *= ratio;
+                imgHeight *= ratio;
+              }
+              
+              canvas.width = imgWidth;
+              canvas.height = imgHeight;
+              
+              // Draw image on canvas
+              ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
+              
+              // Get image data as base64
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              
+              // Store image info for adding to PDF
+              imgInfos.push({
+                dataUrl,
+                width: imgWidth,
+                height: imgHeight,
+                originalPath: imgPath
+              });
+              
+              resolve();
+            };
+            
+            img.onerror = (err) => {
+              console.error(`Error loading image: ${imageUrl}`, err);
+              resolve(); // Resolve anyway to continue with other images
+            };
+            
+            img.src = imageUrl;
+          });
+          
+          imagePromises.push(promise);
+        }
+        
+        // Wait for all images to load
+        await Promise.all(imagePromises);
+        
+        // Add images to PDF once loaded
+        if (imgInfos.length > 0) {
+          // Define dimensions
+          const marginLeft = 14;
+          const marginRight = 14;
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const availableWidth = pageWidth - marginLeft - marginRight;
+          
+          let xPos = marginLeft;
+          let yPos = currentY;
+          const spaceBetweenImages = 10;
+          
+          // Add each image
+          for (let i = 0; i < imgInfos.length; i++) {
+            const imgInfo = imgInfos[i];
+            
+            // Check if we need to add a new row
+            if (i > 0 && i % 2 === 0) {
+              yPos += imgInfo.height + spaceBetweenImages;
+              xPos = marginLeft;
+            } else if (i > 0) {
+              xPos = marginLeft + availableWidth / 2;
+            }
+            
+            // Check if we need a new page
+            if (yPos + imgInfo.height > doc.internal.pageSize.getHeight() - 20) {
+              doc.addPage();
+              yPos = 20;
+              xPos = marginLeft;
+            }
+            
+            try {
+              // Add the image
+              doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
+              
+              // Add image number below the image
+              doc.setFontSize(8);
+              doc.setFont(undefined, 'normal');
+              doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
+            } catch (imgError) {
+              console.error('Error adding image to PDF:', imgError);
+            }
+          }
+          
+          // Update Y position for next content
+          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages + 10;
+        } else {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'italic');
+          doc.text("No images available", marginLeft, currentY + 10);
+          currentY += 20;
+        }
+      }
 
       // Add signature section
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text("ASSESSOR SIGNATURE", 14, doc.lastAutoTable.finalY + 20);
+      doc.text("ASSESSOR SIGNATURE", 14, currentY + 10);
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text("Name: " + order.surveyors?.join(", ") || 'N/A', 14, doc.lastAutoTable.finalY + 25);
-      doc.text("Date: " + new Date().toLocaleDateString(), 14, doc.lastAutoTable.finalY + 30);
+      doc.text("Name: " + (order.surveyors?.join(", ") || 'N/A'), 14, currentY + 20);
+      doc.text("Date: " + new Date().toLocaleDateString(), 14, currentY + 30);
 
-      // Add footer
+      // Add footer with page numbers
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -211,7 +362,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
     }
-  };  // Handle empty orders array
+  };// Handle empty orders array
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 text-center">

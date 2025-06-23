@@ -635,7 +635,6 @@ export default function Dashboard() {
     setShowOrderModal(false)
     setCurrentOrder(null)
   }
-
   const downloadSinglePDF = async (order) => {
     try {
       const doc = new jsPDF();
@@ -652,18 +651,23 @@ export default function Dashboard() {
       doc.text("Date: " + order.dateOfSurvey?.slice(0, 10) || 'N/A', 14, 30);
       doc.text("Surveyors: " + order.surveyors?.join(", ") || 'N/A', 14, 35);
 
-      // Add sections using autoTable - location information
-      const locationInfo = [
-        ['Space Name/ID:', order.confinedSpaceNameOrId || 'N/A'],
-        ['Building:', order.building || 'N/A'],
-        ['Location Description:', order.locationDescription || 'N/A']
-      ];
+      // Add a line separator
+      doc.setDrawColor(0);
+      doc.line(14, 40, 196, 40);
       
+      // Section 1: Location Information
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text("1. LOCATION INFORMATION", 14, 50);
       
       let currentY = 55;
+      
+      const locationInfo = [
+        ['Space Name/ID:', order.confinedSpaceNameOrId || 'N/A'],
+        ['Building:', order.building || 'N/A'],
+        ['Location Description:', order.locationDescription || 'N/A'],
+        ['Confined Space Description:', order.confinedSpaceDescription || 'N/A']
+      ];
       
       autoTable(doc, {
         body: locationInfo,
@@ -678,9 +682,128 @@ export default function Dashboard() {
           currentY = data.cursor.y + 10;
         }
       });
+
+      // Section 2: Space Classification
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("2. SPACE CLASSIFICATION", 14, currentY);
+      currentY += 5;
+      
+      const spaceClassification = [
+        ['Is this a Confined Space:', order.confinedSpace ? '☒ Yes' : '☐ No'],
+        ['Permit Required:', order.permitRequired ? '☒ Yes' : '☐ No'],
+        ['Entry Requirements:', order.entryRequirements || 'N/A']
+      ];
+
+      autoTable(doc, {
+        body: spaceClassification,
+        startY: currentY + 5,
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' },
+          1: { cellWidth: 130 }
+        },
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
+      });
+
+      // Section 3: Hazard Assessment
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("3. HAZARD ASSESSMENT", 14, currentY);
+      currentY += 5;
+      
+      const hazardsAssessment = [
+        ['Atmospheric Hazard:', order.atmosphericHazard ? '☒ Yes' : '☐ No'],
+        ['Description:', order.atmosphericHazardDescription || 'N/A'],
+        ['Engulfment Hazard:', order.engulfmentHazard ? '☒ Yes' : '☐ No'],
+        ['Description:', order.engulfmentHazardDescription || 'N/A'],
+        ['Configuration Hazard:', order.configurationHazard ? '☒ Yes' : '☐ No'],
+        ['Description:', order.configurationHazardDescription || 'N/A'],
+        ['Other Recognized Hazards:', order.otherRecognizedHazards ? '☒ Yes' : '☐ No'],
+        ['Description:', order.otherHazardsDescription || 'N/A']
+      ];
+
+      autoTable(doc, {
+        body: hazardsAssessment,
+        startY: currentY + 5,
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' },
+          1: { cellWidth: 130 }
+        },
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
+      });
+
+      // Section 4: Safety Measures
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("4. SAFETY MEASURES", 14, currentY);
+      currentY += 5;
+      
+      const safetyMeasures = [
+        ['PPE Required:', order.ppeRequired ? '☒ Yes' : '☐ No'],
+        ['PPE List:', order.ppeList || 'N/A'],
+        ['Forced Air Ventilation:', order.forcedAirVentilationSufficient ? '☒ Sufficient' : '☐ Insufficient'],
+        ['Dedicated Air Monitor:', order.dedicatedContinuousAirMonitor ? '☒ Yes' : '☐ No'],
+        ['Warning Sign Posted:', order.warningSignPosted ? '☒ Yes' : '☐ No'],
+        ['Number of Entry Points:', order.numberOfEntryPoints || 'N/A']
+      ];
+
+      autoTable(doc, {
+        body: safetyMeasures,
+        startY: currentY + 5,
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' },
+          1: { cellWidth: 130 }
+        },
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
+      });
+
+      // Section 5: Additional Information
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("5. ADDITIONAL INFORMATION", 14, currentY);
+      currentY += 5;
+      
+      const additionalInfo = [
+        ['Other People Working Near Space:', order.otherPeopleWorkingNearSpace ? '☒ Yes' : '☐ No'],
+        ['Can Others See into Space:', order.canOthersSeeIntoSpace ? '☒ Yes' : '☐ No'],
+        ['Do Contractors Enter Space:', order.contractorsEnterSpace ? '☒ Yes' : '☐ No'],
+        ['Notes:', order.notes || 'N/A']
+      ];
+
+      autoTable(doc, {
+        body: additionalInfo,
+        startY: currentY + 5,
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' },
+          1: { cellWidth: 130 }
+        },
+        theme: 'grid',
+        didDrawPage: (data) => {
+          currentY = data.cursor.y + 10;
+        }
+      });
       
       // Add images section if available
       if (order.pictures && order.pictures.length > 0) {
+        // Add a new page for images if we're running out of space
+        if (currentY > doc.internal.pageSize.getHeight() - 100) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
         doc.text("CONFINED SPACE IMAGES", 14, currentY);
@@ -690,8 +813,8 @@ export default function Dashboard() {
         const imagePromises = [];
         const imgInfos = [];
         
-        // Prepare image loading
-        for (let i = 0; i < order.pictures.length && i < 3; i++) {
+        // Prepare image loading for all images
+        for (let i = 0; i < order.pictures.length; i++) {
           const imgPath = order.pictures[i];
           const imageUrl = imgPath.startsWith('http') 
             ? imgPath 
@@ -730,7 +853,8 @@ export default function Dashboard() {
               imgInfos.push({
                 dataUrl,
                 width: imgWidth,
-                height: imgHeight
+                height: imgHeight,
+                originalPath: imgPath
               });
               
               resolve();
@@ -757,7 +881,6 @@ export default function Dashboard() {
           const marginRight = 14;
           const pageWidth = doc.internal.pageSize.getWidth();
           const availableWidth = pageWidth - marginLeft - marginRight;
-          const xPositions = [marginLeft, marginLeft + availableWidth / 2];
           
           let xPos = marginLeft;
           let yPos = currentY;
@@ -783,14 +906,20 @@ export default function Dashboard() {
             }
             
             try {
+              // Add the image
               doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
+              
+              // Add image number below the image
+              doc.setFontSize(8);
+              doc.setFont(undefined, 'normal');
+              doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
             } catch (imgError) {
               console.error('Error adding image to PDF:', imgError);
             }
           }
           
           // Update Y position for next content
-          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages;
+          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages + 10;
         } else {
           doc.setFontSize(10);
           doc.setFont(undefined, 'italic');
@@ -798,8 +927,28 @@ export default function Dashboard() {
           currentY += 20;
         }
       }
-      
-      // Add more sections with hazard data, classifications etc.
+
+      // Add signature section
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("ASSESSOR SIGNATURE", 14, currentY + 10);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("Name: " + (order.surveyors?.join(", ") || 'N/A'), 14, currentY + 20);
+      doc.text("Date: " + new Date().toLocaleDateString(), 14, currentY + 30);
+
+      // Add footer with page numbers
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: "center" }
+        );
+      }
       
       // Save the PDF
       doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
