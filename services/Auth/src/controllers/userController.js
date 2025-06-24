@@ -32,10 +32,11 @@ exports.register = async (req, res) => {
       confirmPassword: hashed,
       phone,
       userType,
-      isAdmin
+      isAdmin,
+      isActive: false // User is inactive until admin approval
     });
 
-    res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({ message: 'Registration successful. Awaiting admin approval.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -257,5 +258,20 @@ exports.createUser = async (req, res) => {
   } catch (err) {
     console.error('Error creating user:', err);
     res.status(500).json({ message: err.message || 'Error creating user' });
+  }
+};
+
+// Admin approves user by ID
+exports.approveUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    ).select('-password -confirmPassword');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: 'User approved successfully', user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

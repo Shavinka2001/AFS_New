@@ -31,7 +31,7 @@ if (!fs.existsSync(uploadDir)) {
 app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // <-- Add 'PATCH' here
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 

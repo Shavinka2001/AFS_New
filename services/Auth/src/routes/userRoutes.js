@@ -69,4 +69,7 @@ router.delete("/:id", protect, isAdmin, userController.deleteUser);
 // Admin-only route to create new users
 router.post("/", protect, isAdmin, userController.createUser);
 
+// Add this route for approving users
+router.patch('/approve/:id', protect, isAdmin, userController.approveUser);
+
 module.exports = router;

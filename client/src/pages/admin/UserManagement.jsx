@@ -225,6 +225,32 @@ const UserManagement = () => {
     }
   };
 
+  // Approve user
+  const handleApproveUser = async (userId) => {
+    setError(null);
+    setSuccess(null);
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await api.patch(
+        `/approve/${userId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      if (response.data && response.data.user) {
+        setUsers(users.map(user =>
+          user._id === userId ? { ...user, isActive: true } : user
+        ));
+        setSuccess("User approved successfully!");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to approve user.");
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
@@ -305,6 +331,9 @@ const UserManagement = () => {
                   <th scope="col" className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
                     Status
                   </th>
+                  <th scope="col" className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Approval
+                  </th>
                   <th scope="col" className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
@@ -363,6 +392,36 @@ const UserManagement = () => {
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
+                    <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
+                    {user.isActive ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-green-400 to-green-600 text-white font-semibold shadow">
+                        Approved
+                      </span>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleApproveUser(user._id)}
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold shadow hover:from-blue-600 hover:to-blue-800 transition-all"
+                          title="Approve"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user._id)}
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold shadow hover:from-red-600 hover:to-red-800 transition-all"
+                          title="Reject"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </td>
                     <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2 sm:space-x-4">
                         <button
