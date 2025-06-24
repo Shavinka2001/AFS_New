@@ -394,27 +394,30 @@ const UserManagement = () => {
                     </td>
                     <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
                     {user.isActive ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-green-400 to-green-600 text-white font-semibold shadow">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold shadow-sm border border-green-200 text-xs sm:text-sm">
+                        <svg className="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
                         Approved
                       </span>
                     ) : (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleApproveUser(user._id)}
-                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold shadow hover:from-blue-600 hover:to-blue-800 transition-all"
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-sm border border-blue-400 hover:from-blue-700 hover:to-blue-600 transition-all text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                           title="Approve"
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-1 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
                           Approve
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user._id)}
-                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold shadow hover:from-red-600 hover:to-red-800 transition-all"
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-red-400 text-white font-semibold shadow-sm border border-red-300 hover:from-red-600 hover:to-red-500 transition-all text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                           title="Reject"
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-1 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                           Reject
