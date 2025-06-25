@@ -5,6 +5,7 @@ import WorkOrderModal from '../../components/admin/confined/WorkOrderModel';
 import WorkOrderSearch from '../../components/admin/confined/WorkOrderSearch';
 import WorkOrderAlert from '../../components/admin/confined/WorkOrderAlert';
 import { toast } from 'react-toastify';
+import * as XLSX from "xlsx";
 
 const WorkOrderManagementPage = () => {
   const [orders, setOrders] = useState([]);
@@ -158,6 +159,51 @@ const WorkOrderManagementPage = () => {
     setOrderToDelete(null);
   };
 
+  // Download filtered orders as Excel
+  const handleDownloadFilteredExcel = () => {
+    if (!orders || orders.length === 0) {
+      toast.info("No work orders to export.");
+      return;
+    }
+    const allOrders = orders.map(order => ({
+      "Order ID": order._id,
+      "Unique ID": order.uniqueId,
+      "Date of Survey": order.dateOfSurvey,
+      "Surveyors": Array.isArray(order.surveyors) ? order.surveyors.join(", ") : order.surveyors,
+      "Confined Space Name/ID": order.confinedSpaceNameOrId,
+      "Building": order.building,
+      "Location Description": order.locationDescription,
+      "Confined Space Description": order.confinedSpaceDescription,
+      "Confined Space": order.confinedSpace ? "Yes" : "No",
+      "Permit Required": order.permitRequired ? "Yes" : "No",
+      "Entry Requirements": order.entryRequirements,
+      "Atmospheric Hazard": order.atmosphericHazard ? "Yes" : "No",
+      "Atmospheric Hazard Description": order.atmosphericHazardDescription,
+      "Engulfment Hazard": order.engulfmentHazard ? "Yes" : "No",
+      "Engulfment Hazard Description": order.engulfmentHazardDescription,
+      "Configuration Hazard": order.configurationHazard ? "Yes" : "No",
+      "Configuration Hazard Description": order.configurationHazardDescription,
+      "Other Recognized Hazards": order.otherRecognizedHazards ? "Yes" : "No",
+      "Other Hazards Description": order.otherHazardsDescription,
+      "PPE Required": order.ppeRequired ? "Yes" : "No",
+      "PPE List": order.ppeList,
+      "Forced Air Ventilation Sufficient": order.forcedAirVentilationSufficient ? "Yes" : "No",
+      "Dedicated Continuous Air Monitor": order.dedicatedContinuousAirMonitor ? "Yes" : "No",
+      "Warning Sign Posted": order.warningSignPosted ? "Yes" : "No",
+      "Other People Working Near Space": order.otherPeopleWorkingNearSpace ? "Yes" : "No",
+      "Can Others See Into Space": order.canOthersSeeIntoSpace ? "Yes" : "No",
+      "Contractors Enter Space": order.contractorsEnterSpace ? "Yes" : "No",
+      "Number Of Entry Points": order.numberOfEntryPoints,
+      "Notes": order.notes,
+      "Pictures": Array.isArray(order.pictures) ? order.pictures.join(", ") : order.pictures,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(allOrders);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "WorkOrders");
+    XLSX.writeFile(wb, "confined-space-work-orders.xlsx");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
@@ -168,7 +214,6 @@ const WorkOrderManagementPage = () => {
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Confined Space Work Orders</h1>
               <p className="mt-2 text-base sm:text-lg text-gray-700">Manage and track confined space work orders</p>
             </div>
-           
           </div>
         </div>
 
@@ -177,12 +222,24 @@ const WorkOrderManagementPage = () => {
           <WorkOrderAlert type={alert.type} message={alert.message} />
         </div>        {/* Search Section */}
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
-          <WorkOrderSearch 
-            search={search} 
-            onChange={handleSearchChange} 
-            onSearch={handleSearch} 
-            onClear={clearSearch}
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <WorkOrderSearch 
+              search={search} 
+              onChange={handleSearchChange} 
+              onSearch={handleSearch} 
+              onClear={clearSearch}
+            />
+            <button
+              onClick={handleDownloadFilteredExcel}
+              className="mt-2 sm:mt-0 text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center bg-gray-50 px-3 py-2 rounded-md border border-gray-300 hover:border-gray-400 shadow-sm hover:shadow transition-all"
+              title="Download filtered work orders as Excel"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Download Filtered
+            </button>
+          </div>
         </div>
 
         {/* Table Section */}
@@ -244,3 +301,4 @@ const WorkOrderManagementPage = () => {
 };
 
 export default WorkOrderManagementPage;
+
