@@ -119,10 +119,12 @@ const LocationManagement = () => {
           Add New Location
         </button>
       </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="order-2 lg:order-1">
+      {/* Change grid to vertical stack: Table on top, Map below */}
+      <div className="flex flex-col gap-6 mb-6">
+        <div>
           <div className="bg-white shadow rounded-lg p-4">
-            <h2 className="text-xl font-semibold mb-4">Locations</h2>            <LocationTable 
+            <h2 className="text-xl font-semibold mb-4">Locations</h2>
+            <LocationTable 
               locations={locations} 
               loading={loading}
               onEdit={handleEditLocation}
@@ -133,8 +135,7 @@ const LocationManagement = () => {
             />
           </div>
         </div>
-        
-        <div id="location-map" className="order-1 lg:order-2">
+        <div id="location-map">
           <div className="bg-white shadow rounded-lg p-4 ">
             <h2 className="text-xl font-semibold mb-4">Map View</h2>
             <div className="h-[500px] w-full">
