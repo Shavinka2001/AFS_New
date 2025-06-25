@@ -58,8 +58,43 @@ const LocationManagement = () => {
     }
   };
 
+  // Helper for system-style confirmation using toast
+const confirmDialog = (message) => {
+  return new Promise((resolve) => {
+    const toastId = toast(
+      ({ closeToast }) => (
+        <div>
+          <div className="font-semibold mb-2">{message}</div>
+          <div className="flex gap-2">
+            <button
+              className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+              onClick={() => {
+                resolve(true);
+                toast.dismiss(toastId);
+              }}
+            >
+              Yes
+            </button>
+            <button
+              className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
+              onClick={() => {
+                resolve(false);
+                toast.dismiss(toastId);
+              }}
+            >
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false, closeOnClick: false }
+    );
+  });
+};
+
   const handleDeleteLocation = async (location) => {
-    if (window.confirm(`Are you sure you want to delete ${location.name}?`)) {
+    const confirmed = await confirmDialog(`Are you sure you want to delete ${location.name}?`);
+    if (confirmed) {
       try {
         await deleteLocation(location._id);
         toast.success("Location deleted successfully");
@@ -119,10 +154,12 @@ const LocationManagement = () => {
           Add New Location
         </button>
       </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="order-2 lg:order-1">
+      {/* Change grid to vertical stack: Table on top, Map below */}
+      <div className="flex flex-col gap-6 mb-6">
+        <div>
           <div className="bg-white shadow rounded-lg p-4">
-            <h2 className="text-xl font-semibold mb-4">Locations</h2>            <LocationTable 
+            <h2 className="text-xl font-semibold mb-4">Locations</h2>
+            <LocationTable 
               locations={locations} 
               loading={loading}
               onEdit={handleEditLocation}
@@ -133,8 +170,7 @@ const LocationManagement = () => {
             />
           </div>
         </div>
-        
-        <div id="location-map" className="order-1 lg:order-2">
+        <div id="location-map">
           <div className="bg-white shadow rounded-lg p-4 ">
             <h2 className="text-xl font-semibold mb-4">Map View</h2>
             <div className="h-[500px] w-full">
