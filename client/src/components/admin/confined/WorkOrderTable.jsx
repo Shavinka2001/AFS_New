@@ -363,8 +363,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
             <thead className="bg-gray-50">
               <tr>                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Order ID</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Survey Date</th>
-                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Surveyors</th>
-                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Space Name/ID</th>
+                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Space Name/ID</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">Building</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Permit Required</th>
                 <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
@@ -380,9 +379,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{order.dateOfSurvey?.slice(0,10)}</div>
                   </td>
-                  <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 hidden sm:table-cell">
-                    <div className="text-sm text-gray-900">{order.surveyors?.join(", ")}</div>
-                  </td>
+               
                   <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
                     <div className="text-sm text-gray-900">{order.confinedSpaceNameOrId}</div>
                   </td>
