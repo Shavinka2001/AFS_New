@@ -190,6 +190,7 @@ const UserManagement = () => {
 
       if (newUser.password) {
         userData.password = newUser.password;
+        userData.confirmPassword = newUser.password; // <-- Add this line
       }
 
       const response = await api.put(
