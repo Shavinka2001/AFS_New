@@ -206,15 +206,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </button>
-                            <button
-                              onClick={() => downloadSinglePDF(order)}
-                              className="p-1 rounded text-gray-600 hover:bg-gray-50 transition-colors"
-                              title="Download PDF"
-                            >
-                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </button>
+                            
                             <button 
                               onClick={() => onDeleteOrder(order._id)} 
                               className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
@@ -568,10 +560,11 @@ export default function Dashboard() {
   }
 
   const handleEditOrder = (order) => {
-    setCurrentOrder(order)
-    setIsView(false)
-    setIsEdit(true)
-    setShowOrderModal(true)
+    // Do nothing or show a message if needed
+    // setCurrentOrder(order)
+    // setIsView(false)
+    // setIsEdit(true)
+    // setShowOrderModal(true)
   }
     const handleDeleteOrder = async (orderId) => {
     if (window.confirm("Are you sure you want to delete this work order? This action cannot be undone.")) {
@@ -818,60 +811,49 @@ export default function Dashboard() {
             ) : 
             imgPath; // Some other format, hope for the best
           
-          const promise = new Promise((resolve, reject) => {            const img = new Image();
+          const promise = new Promise((resolve, reject) => {            
+            const img = new Image();
             img.crossOrigin = "Anonymous";
             img.onload = () => {
               const canvas = document.createElement('canvas');
               const ctx = canvas.getContext('2d');
-              
               // Set canvas dimensions proportional to image
               let imgWidth = img.width;
               let imgHeight = img.height;
               const maxWidth = 170; // Increased from 170
               const maxHeight = 120; // Increased from 120
-              
               // Resize image to fit within maximum dimensions while maintaining aspect ratio
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
                 const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
                 imgWidth *= ratio;
                 imgHeight *= ratio;
               }
-              
-              // Set high resolution canvas with 2x density for better quality
-              canvas.width = imgWidth * 2;
-              canvas.height = imgHeight * 2;
+              // Set high resolution canvas with 3x density for better quality
+              canvas.width = imgWidth * 3;
+              canvas.height = imgHeight * 3;
               canvas.style.width = imgWidth + "px";
               canvas.style.height = imgHeight + "px";
-              
               // Scale context for high-res rendering
-              ctx.scale(2, 2);
-              
+              ctx.scale(3, 3);
               // Improve image quality with better rendering
               ctx.imageSmoothingEnabled = true;
               ctx.imageSmoothingQuality = "high";
-              
               // Draw image on canvas with better quality
               ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
-              
-              // Get image data as base64 with higher quality
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // Increased quality from default 0.92
-              
-              // Store image info for adding to PDF
+              // Get image data as base64 with highest quality PNG
+              const dataUrl = canvas.toDataURL('image/png', 1.0);
               imgInfos.push({
                 dataUrl,
                 width: imgWidth,
                 height: imgHeight,
                 originalPath: imgPath
               });
-              
               resolve();
             };
-            
             img.onerror = (err) => {
               console.error(`Error loading image: ${imageUrl}`, err);
               resolve(); // Resolve anyway to continue with other images
             };
-            
             img.src = imageUrl;
           });
           
@@ -892,40 +874,34 @@ export default function Dashboard() {
           let yPos = currentY;
           const spaceBetweenImages = 10;
           
-          // Add each image
+          // Add each image vertically, one per row
           for (let i = 0; i < imgInfos.length; i++) {
             const imgInfo = imgInfos[i];
-            
-            // Check if we need to add a new row
-            if (i > 0 && i % 2 === 0) {
-              yPos += imgInfo.height + spaceBetweenImages;
-              xPos = marginLeft;
-            } else if (i > 0) {
-              xPos = marginLeft + availableWidth / 2;
-            }
-            
-            // Check if we need a new page
+
+            // Check if we need to add a new page
             if (yPos + imgInfo.height > doc.internal.pageSize.getHeight() - 20) {
               doc.addPage();
               yPos = 20;
-              xPos = marginLeft;
             }
-            
+
             try {
               // Add the image
-              doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
-              
+              doc.addImage(imgInfo.dataUrl, 'PNG', xPos, yPos, imgInfo.width, imgInfo.height);
+
               // Add image number below the image
               doc.setFontSize(8);
               doc.setFont(undefined, 'normal');
               doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
+
+              // Move yPos for next image (vertically)
+              yPos += imgInfo.height + spaceBetweenImages + 15;
             } catch (imgError) {
               console.error('Error adding image to PDF:', imgError);
             }
           }
           
           // Update Y position for next content
-          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages + 10;
+          currentY = yPos + 10;
         } else {
           doc.setFontSize(10);
           doc.setFont(undefined, 'italic');
@@ -1098,7 +1074,7 @@ export default function Dashboard() {
                 )}
                 loading={orderLoading || locationLoading}
                 onViewOrder={handleViewOrder}
-                onEditOrder={handleEditOrder} 
+                onEditOrder={undefined} // Disable edit for admin
                 onAddOrder={handleAddWorkOrder}
                 onDeleteOrder={handleDeleteOrder}
                 downloadSinglePDF={downloadSinglePDF}

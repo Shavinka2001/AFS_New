@@ -13,12 +13,28 @@ exports.createOrder = async (req, res) => {
         pictures.push(imagePath);
       });
     }
-
     // Merge file paths with other data
+    let allPictures = [];
+    // If client sent existing pictures as JSON string, merge them
+    if (req.body.pictures && typeof req.body.pictures === 'string') {
+      try {
+        const parsedPictures = JSON.parse(req.body.pictures);
+        if (Array.isArray(parsedPictures)) {
+          allPictures = parsedPictures;
+        }
+      } catch (e) {
+        // fallback: comma separated
+        if (req.body.pictures.includes(',')) {
+          allPictures = req.body.pictures.split(',');
+        } else if (req.body.pictures) {
+          allPictures = [req.body.pictures];
+        }
+      }
+    }
+    allPictures = [...allPictures, ...pictures].filter(Boolean).slice(0, 3); // Limit to 3 images
     const orderData = { 
       ...req.body,
-      // Use pictures field from the schema, not images
-      pictures: pictures
+      pictures: allPictures
     };
 
     const order = new Order(orderData);
@@ -97,57 +113,55 @@ exports.updateOrder = async (req, res) => {
     // Get existing order to handle pictures
     const existingOrder = await Order.findById(req.params.id);
     if (!existingOrder) return res.status(404).json({ error: 'Order not found' });
-    
-    // Process new uploaded files, if any
+
+    // Start with existing images from DB
     let pictures = existingOrder.pictures || [];
-    
-    // Add new pictures if files are uploaded
-    if (req.files && req.files.length > 0) {
-      const newPictures = req.files.map(file => `/uploads/${file.filename}`);
-      
-      // Check if we need to replace or append
-      if (req.body.replaceImages === 'true') {
-        pictures = newPictures;
-      } else {
-        pictures = [...pictures, ...newPictures];
-      }
-    }
-    
-    // Handle existing pictures array from request body (might be JSON string)
+
+    // Parse pictures from request body (existing images to keep)
+    let keepPictures = [];
     if (req.body.pictures && typeof req.body.pictures === 'string') {
       try {
-        // If it's a JSON string, parse it
         const parsedPictures = JSON.parse(req.body.pictures);
         if (Array.isArray(parsedPictures)) {
-          pictures = parsedPictures;
+          keepPictures = parsedPictures;
         }
       } catch (e) {
-        // If not JSON, it might be a comma-separated string
         if (req.body.pictures.includes(',')) {
-          pictures = req.body.pictures.split(',');
-        } else {
-          // Single value
-          pictures = [req.body.pictures];
+          keepPictures = req.body.pictures.split(',');
+        } else if (req.body.pictures) {
+          keepPictures = [req.body.pictures];
         }
       }
     }
-    
+
+    // Add new uploaded files (if any)
+    let newPictures = [];
+    if (req.files && req.files.length > 0) {
+      newPictures = req.files.map(file => `/uploads/${file.filename}`);
+    }
+
+    // Merge: keepPictures (from client) + newPictures (uploaded now)
+    pictures = [...keepPictures, ...newPictures]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 3);
+
     // Prepare update data
     const updateData = {
       ...req.body,
       pictures
     };
-    
+
     // Remove any JSON stringified fields that might cause issues
     delete updateData.pictures_json;
     delete updateData.replaceImages;
-    
+
     const updatedOrder = await Order.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedOrder) return res.status(404).json({ error: 'Order not found' });
     res.json(updatedOrder);
   } catch (err) {
@@ -165,3 +179,4 @@ exports.deleteOrder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+

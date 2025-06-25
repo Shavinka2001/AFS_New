@@ -52,16 +52,20 @@ export const createWorkOrder = async (orderData) => {
       }
     });    // Add pictures if they exist (for file uploads, use "images" as field name for multer)
     if (orderData.pictures && orderData.pictures.length > 0) {
-      orderData.pictures.forEach((image, index) => {
-        // If it's a File object, add it directly
+      // Only send up to 3 images
+      const limitedPictures = orderData.pictures.slice(0, 3);
+      const existingImagePaths = [];
+      limitedPictures.forEach((image) => {
         if (image instanceof File) {
-          formData.append('images', image); // Field name "images" will be handled by multer as defined in routes
-        } 
-        // If it's a string (URL), we need to handle it differently
-        else if (typeof image === 'string') {
-          formData.append('existingPictures', image);
+          formData.append('images', image);
+        } else if (typeof image === 'string') {
+          existingImagePaths.push(image);
         }
       });
+      // Always send the current list of images to keep
+      formData.set('pictures', JSON.stringify(existingImagePaths));
+    } else {
+      formData.set('pictures', JSON.stringify([]));
     }
     
     const response = await axios.post(API_URL, formData, {
@@ -126,10 +130,9 @@ export const getWorkOrderById = async (id) => {
 export const updateWorkOrder = async (id, orderData) => {
   try {
     console.log('Updating work order with data:', orderData); // Debug log
-    
-    // Create a FormData object for file uploads
+
     const formData = new FormData();
-      // Add all regular fields to formData
+    // Add all regular fields to formData
     Object.keys(orderData).forEach(key => {
       if (key !== 'pictures') {
         // Handle arrays and booleans
@@ -146,36 +149,38 @@ export const updateWorkOrder = async (id, orderData) => {
         }
       }
     });
-      // Handle pictures
+
+    // Handle pictures
     if (orderData.pictures && orderData.pictures.length > 0) {
-      let hasNewImages = false;
+      const limitedPictures = orderData.pictures.slice(0, 3);
       const existingImagePaths = [];
-      
-      orderData.pictures.forEach((image, index) => {
-        // Check if it's a File object (new upload)
+      limitedPictures.forEach((image, idx) => {
+        // Debug: log type of each image
+        console.log(`Picture[${idx}] type:`, typeof image, image instanceof File ? 'File' : '');
         if (image instanceof File) {
-          hasNewImages = true;
           formData.append('images', image);
-        }
-        // If it's a string URL (existing image path)
-        else if (typeof image === 'string') {
+        } else if (typeof image === 'string') {
           existingImagePaths.push(image);
         }
       });
-      
-      // If we have existing image paths, add them as a JSON string
-      if (existingImagePaths.length > 0) {
-        formData.append('pictures', JSON.stringify(existingImagePaths));
-      }
+      formData.set('pictures', JSON.stringify(existingImagePaths));
+    } else {
+      formData.set('pictures', JSON.stringify([]));
     }
-    
+
+    // Debug: log FormData content
+    // (for debugging only, remove in production)
+    for (let pair of formData.entries()) {
+      console.log(pair[0]+ ':', pair[1]);
+    }
+
     const response = await axios.put(`${API_URL}/${id}`, formData, {
       headers: {
         ...authHeader(),
-        'Content-Type': 'multipart/form-data', // Important for file uploads
+        'Content-Type': 'multipart/form-data',
       },
     });
-    
+
     console.log('Update work order response:', response.data); // Debug log
     return response.data;
   } catch (error) {

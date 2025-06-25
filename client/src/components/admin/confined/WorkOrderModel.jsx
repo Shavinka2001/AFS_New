@@ -43,18 +43,17 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [availableBuildings, setAvailableBuildings] = useState([]);
 
-  const [previewImages, setPreviewImages] = useState([]);
+  const [previewImages, setPreviewImages] = useState([]); // For new uploads (base64 preview)
+  const [existingImages, setExistingImages] = useState([]); // For previously uploaded images (URLs/paths)
   // Camera states
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   
+  // Fetch assigned locations only once on mount
   useEffect(() => {
-    // Get the current user data and their assigned locations
     const user = JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}');
-    const technicianName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
-    
     // Fetch full location details from the API
     const fetchLocations = async () => {
       try {
@@ -65,21 +64,16 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
             'Content-Type': 'application/json'
           }
         });
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch assigned locations");
-        }
-        
+        if (!response.ok) throw new Error("Failed to fetch assigned locations");
         const data = await response.json();
         let locationData = [];
         if (data.success && data.locations) {
           locationData = data.locations;
-          setAssignedLocations(data.locations);
         } else if (data.data) {
-          // Alternative response format
           locationData = data.data;
-          setAssignedLocations(data.data);
-        }        // If there's exactly one location, automatically set it in the form
+        }
+        setAssignedLocations(locationData);
+        // If there's exactly one location, automatically set it in the form
         if (locationData.length === 1) {
           const location = locationData[0];
           setSelectedLocation(location);
@@ -96,9 +90,15 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         setIsLoadingLocations(false);
       }
     };
-    
     fetchLocations();
-      if (order) {
+    // eslint-disable-next-line
+  }, []);
+
+  // Update form state when order or assignedLocations changes
+  useEffect(() => {
+    if (order) {
+      const user = JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}');
+      const technicianName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
       // Ensure all boolean fields are properly initialized
       const booleanFields = [
         'confinedSpace',
@@ -115,23 +115,30 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         'canOthersSeeIntoSpace',
         'contractorsEnterSpace'
       ];
-
       const processedOrder = {
         ...order,
         dateOfSurvey: order.dateOfSurvey?.slice(0, 10) || "",
         surveyors: Array.isArray(order.surveyors) ? order.surveyors : [],
-        technician: technicianName, // Add the technician name
+        technician: technicianName,
         images: order.images || []
       };
-
-      // Ensure boolean fields are properly set
       booleanFields.forEach(field => {
         processedOrder[field] = Boolean(processedOrder[field]);
       });
-
       setFormData(processedOrder);
       setPreviewImages(order.images || []);
-      
+      // Load existing images (from pictures or images field)
+      const imgs = (order.pictures && Array.isArray(order.pictures) ? order.pictures : [])
+        .concat(order.images && Array.isArray(order.images) ? order.images : [])
+        .filter(Boolean)
+        // Map to full URL if needed
+        .map(img =>
+          typeof img === "string" && img.startsWith("/uploads/")
+            ? `${import.meta.env.VITE_FILE_SERVER_URL || "http://localhost:5002"}${img}`
+            : img
+        );
+      setExistingImages(imgs);
+      setPreviewImages([]); // Reset new uploads
       // If editing and we have assigned locations, find the location that matches the work order
       if (assignedLocations.length > 0 && order.confinedSpaceNameOrId) {
         const orderLocation = assignedLocations.find(loc => loc.name === order.confinedSpaceNameOrId);
@@ -141,6 +148,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         }
       }
     }
+    // eslint-disable-next-line
   }, [order, assignedLocations]);
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -184,53 +192,60 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         [name]: value
       }));
     }
-  };  const handleImageUpload = (e) => {
+  };  // Image upload handler (for new images)
+  const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    
-    // Check if adding these files would exceed the 3-image limit
-    if (previewImages.length + files.length > 3) {
-      toast.warning(`You can only upload up to 3 images. Currently ${previewImages.length} image(s) are uploaded.`);
+    // Only allow up to 3 total images (existing + new)
+    if (existingImages.length + previewImages.length + files.length > 3) {
+      toast.warning(`You can only upload up to 3 images. Currently ${existingImages.length + previewImages.length} image(s) are selected.`);
       return;
     }
-    
-    const newPreviewImages = [];
     const maxFileSize = 5 * 1024 * 1024; // 5MB
-
     files.forEach(file => {
-      // Check if the file is an image
       if (file.type.startsWith('image/')) {
-        // Check file size
         if (file.size > maxFileSize) {
           toast.error(`File ${file.name} exceeds the 5MB size limit`);
           return;
         }
-        
         const reader = new FileReader();
         reader.onloadend = () => {
-          newPreviewImages.push(reader.result);
-          setPreviewImages(prev => [...prev, reader.result]);
-            // Store the actual file in formData.pictures for sending to server
-          setFormData(prev => ({
-            ...prev,
-            pictures: [...(prev.pictures || []), file]
-          }));
+          setPreviewImages(prev => [...prev, { file, preview: reader.result }]);
         };
         reader.readAsDataURL(file);
       } else {
         toast.error('Please upload only image files (PNG, JPG or JPEG)');
       }
     });
-  };const removeImage = (index) => {
-    // Remove from preview images
-    const newPreviewImages = previewImages.filter((_, i) => i !== index);
-    setPreviewImages(newPreviewImages);
-      // Remove from form data pictures
-    const newImages = formData.pictures ? formData.pictures.filter((_, i) => i !== index) : [];
-    setFormData(prev => ({
-      ...prev,
-      pictures: newImages
-    }));
-    
+  };
+
+  const removeImage = (type, index) => {
+    if (type === "existing") {
+      setExistingImages(prev => {
+        const updated = prev.filter((_, i) => i !== index);
+        // Also update formData.pictures to match
+        setFormData(f => ({
+          ...f,
+          pictures: [
+            ...updated,
+            ...previewImages.map(img => img.file)
+          ]
+        }));
+        return updated;
+      });
+    } else {
+      setPreviewImages(prev => {
+        const updated = prev.filter((_, i) => i !== index);
+        // Also update formData.pictures to match
+        setFormData(f => ({
+          ...f,
+          pictures: [
+            ...existingImages,
+            ...updated.map(img => img.file)
+          ]
+        }));
+        return updated;
+      });
+    }
     toast.info('Image removed');
   };
 
@@ -269,7 +284,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
   const captureImage = () => {
     if (videoRef.current && canvasRef.current) {
       // Check if we've reached the 3 image limit
-      if (previewImages.length >= 3) {
+      if (existingImages.length + previewImages.length >= 3) {
         toast.warning('Maximum of 3 images allowed. Please remove an image before adding another.');
         return;
       }
@@ -287,20 +302,12 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       
       // Convert canvas to data URL
       const imageDataUrl = canvas.toDataURL('image/jpeg');
-      
-      // Add to preview and form data
-      setPreviewImages([...previewImages, imageDataUrl]);
-      
       // Convert base64 to blob for form submission
       fetch(imageDataUrl)
         .then(res => res.blob())
         .then(blob => {
           const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-            // Update form data with new image
-          setFormData(prev => ({
-            ...prev,
-            pictures: [...(prev.pictures || []), file]
-          }));
+          setPreviewImages(prev => [...prev, { file, preview: imageDataUrl }]);
         });
       
       // Close camera after capture
@@ -328,7 +335,6 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       // Get user from localStorage
       const user = JSON.parse(localStorage.getItem("User"));
@@ -337,12 +343,19 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       // If surveyors field is empty or not properly set, use the logged-in user's name
       const technicianName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
       
+      // Prepare pictures array: files for new, URLs for existing
+      const pictures = [
+        ...existingImages, // URLs/paths
+        ...previewImages.map(img => img.file) // Files
+      ].slice(0, 3); // Ensure max 3 images
       const dataToSubmit = {
         ...formData,
         userId,
-        surveyors: [technicianName], // Set surveyors as an array with technician name
+        surveyors: [technicianName],
         dateOfSurvey: formData.dateOfSurvey ? new Date(formData.dateOfSurvey).toISOString() : new Date().toISOString(),
-      };      // Process the form submission - handle direct API calls here
+        pictures
+      };
+      // Process the form submission - handle direct API calls here
       let result;
       if (isEdit && order?._id) {
         // Update existing order
@@ -485,25 +498,43 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                 )}
               </div>
 
-              {/* Image Preview Grid */}              {previewImages.length > 0 && (
+              {/* Image Preview Grid */}              {(existingImages.length > 0 || previewImages.length > 0) && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-medium text-gray-900">Preview</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${previewImages.length >= 3 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                      {previewImages.length}/3 images
+                    <span className={`text-xs px-2 py-1 rounded-full ${(existingImages.length + previewImages.length) >= 3 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                      {existingImages.length + previewImages.length}/3 images
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {previewImages.map((image, index) => (
-                      <div key={index} className="relative group">
+                    {existingImages.map((img, idx) => (
+                      <div key={`existing-${idx}`} className="relative group">
                         <img
-                          src={image}
-                          alt={`Preview ${index + 1}`}
+                          src={img}
+                          alt={`Existing ${idx + 1}`}
                           className="w-full h-32 object-cover rounded-lg shadow-md"
                         />
                         <button
                           type="button"
-                          onClick={() => removeImage(index)}
+                          onClick={() => removeImage("existing", idx)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    {previewImages.map((img, idx) => (
+                      <div key={`preview-${idx}`} className="relative group">
+                        <img
+                          src={img.preview}
+                          alt={`Preview ${idx + 1}`}
+                          className="w-full h-32 object-cover rounded-lg shadow-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage("preview", idx)}
                           className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

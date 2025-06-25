@@ -191,159 +191,99 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
           currentY = data.cursor.y + 10;
         }
       });
-        // Add images section if available
-      // First check for pictures in order.pictures (from backend storage)
-      // Then check for images in order.images (from frontend upload)
+      // Add images section if available
       const orderImages = order.pictures || order.images || [];
-      
       if (orderImages && orderImages.length > 0) {
-        // Add a new page for images if we're running out of space
         if (currentY > doc.internal.pageSize.getHeight() - 100) {
           doc.addPage();
           currentY = 20;
         }
-        
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
         doc.text("CONFINED SPACE IMAGES", 14, currentY);
         currentY += 10;
-        
-        // Track the promises for image loading
+
+        // Prepare image loading for all images
         const imagePromises = [];
         const imgInfos = [];
-        
-        // Prepare image loading for all images
         for (let i = 0; i < orderImages.length; i++) {
-          const imgPath = orderImages[i];          // Handle different image formats: URL string, base64 data, or relative path
-          const imageUrl = typeof imgPath === 'string' ? 
-            (imgPath.startsWith('data:') ? 
-              imgPath : // Already base64
-              imgPath.startsWith('http') ? 
-                imgPath : // Already full URL
-                `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}` // Relative path
-            ) : 
-            imgPath; // Some other format, hope for the best
-          
-          const promise = new Promise((resolve, reject) => {            const img = new Image();
+          const imgPath = orderImages[i];
+          const imageUrl = typeof imgPath === 'string'
+            ? (imgPath.startsWith('data:') ? imgPath
+              : imgPath.startsWith('http') ? imgPath
+              : `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}`)
+            : imgPath;
+          const promise = new Promise((resolve) => {
+            const img = new window.Image();
             img.crossOrigin = "Anonymous";
             img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');              // Set canvas dimensions proportional to image
+              // High quality canvas
               let imgWidth = img.width;
               let imgHeight = img.height;
-              const maxWidth = 100; // Further decreased for smaller vertical layout
-              const maxHeight = 80; // Further decreased for smaller vertical layout
-              
-              // Resize image to fit within maximum dimensions while maintaining aspect ratio
+              const maxWidth = 170;
+              const maxHeight = 120;
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
                 const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
                 imgWidth *= ratio;
                 imgHeight *= ratio;
               }
-              
-              // Set high resolution canvas with 2x density for better quality
-              canvas.width = imgWidth * 2;
-              canvas.height = imgHeight * 2;
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              // Use 3x for higher resolution
+              canvas.width = imgWidth * 3;
+              canvas.height = imgHeight * 3;
               canvas.style.width = imgWidth + "px";
               canvas.style.height = imgHeight + "px";
-              
-              // Scale context for high-res rendering
-              ctx.scale(2, 2);
-              
-              // Improve image quality with better rendering
+              ctx.scale(3, 3);
               ctx.imageSmoothingEnabled = true;
               ctx.imageSmoothingQuality = "high";
-              
-              // Draw image on canvas with better quality
               ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
-              
-              // Get image data as base64 with higher quality
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // Increased quality from default 0.92
-              
-              // Store image info for adding to PDF
+              // Use PNG for lossless quality
+              const dataUrl = canvas.toDataURL('image/png', 1.0);
               imgInfos.push({
                 dataUrl,
                 width: imgWidth,
                 height: imgHeight,
                 originalPath: imgPath
               });
-              
               resolve();
             };
-            
-            img.onerror = (err) => {
-              console.error(`Error loading image: ${imageUrl}`, err);
-              resolve(); // Resolve anyway to continue with other images
-            };
-            
+            img.onerror = () => resolve();
             img.src = imageUrl;
           });
-          
           imagePromises.push(promise);
         }
-        
-        // Wait for all images to load
         await Promise.all(imagePromises);
-        
-        // Add images to PDF once loaded
+
+        // Add images to PDF
         if (imgInfos.length > 0) {
-          // Define dimensions
           const marginLeft = 14;
-          const marginRight = 14;
           const pageWidth = doc.internal.pageSize.getWidth();
-          const availableWidth = pageWidth - marginLeft - marginRight;
-          
           let xPos = marginLeft;
           let yPos = currentY;
           const spaceBetweenImages = 10;
-            // Add each image
           for (let i = 0; i < imgInfos.length; i++) {
             const imgInfo = imgInfos[i];
-              // Check if we need to add a new column or stay vertically aligned
-            if (i > 0 && i % 2 === 0) {  // 2 columns of images
-              // Move to next column
-              xPos = marginLeft + availableWidth / 2;
-              
-              // If we're at an even multiple of 4, start a new row
-              if (i % 4 === 0) {
-                xPos = marginLeft;
-                yPos += imgInfo.height + spaceBetweenImages + 15; // Added extra space for captions
-              } else {
-                // Reset Y position to beginning of this set of 2 vertical images
-                yPos = yPos - (imgInfo.height + spaceBetweenImages + 15);
-              }
-            } else if (i > 0) {
-              // Move down in the same column
-              yPos += imgInfo.height + spaceBetweenImages + 15;
-            }
-            
-            // Check if we need a new page
+            // Place each image vertically, one per row
             if (yPos + imgInfo.height > doc.internal.pageSize.getHeight() - 20) {
               doc.addPage();
               yPos = 20;
-              xPos = marginLeft;
             }
-            
             try {
-              // Add a light border around the image
               doc.setDrawColor(200, 200, 200);
               doc.setLineWidth(0.5);
               doc.rect(xPos - 2, yPos - 2, imgInfo.width + 4, imgInfo.height + 4);
-              
-              // Add the image
-              doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
-              
-              // Add image number below the image with better formatting
+              doc.addImage(imgInfo.dataUrl, 'PNG', xPos, yPos, imgInfo.width, imgInfo.height);
               doc.setFontSize(9);
               doc.setFont(undefined, 'bold');
               doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
+              // Move yPos for next image (vertically)
+              yPos += imgInfo.height + spaceBetweenImages + 15;
             } catch (imgError) {
-              console.error('Error adding image to PDF:', imgError);
+              // skip
             }
           }
-          
-          // Update Y position for next content
-          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages + 10;
+          currentY = yPos + 10;
         } else {
           doc.setFontSize(10);
           doc.setFont(undefined, 'italic');
@@ -468,7 +408,8 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                      </button>                      <button
+                      </button>                      {/* Remove or disable Edit button for admin */}
+                      {/* <button
                         onClick={() => handleEdit(order)}
                         className="p-1.5 sm:p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                         title="Edit"
@@ -476,7 +417,8 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                      </button>                      <button
+                      </button> */}
+                      <button
                         onClick={() => handleDelete(order._id)}
                         className="p-1.5 sm:p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                         title="Delete"
