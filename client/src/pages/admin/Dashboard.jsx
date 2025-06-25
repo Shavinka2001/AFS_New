@@ -6,6 +6,7 @@ import { getLocations } from '../../services/locationService';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from 'react-toastify';
+import * as XLSX from "xlsx";
 
 // StatCard Component
 const StatCard = ({ name, value, icon, trend }) => {
@@ -961,6 +962,62 @@ export default function Dashboard() {
     }
   }
 
+  // Download filtered work orders as Excel
+  const handleDownloadAllExcel = () => {
+    // Flatten only filtered orders into a single array
+    const allOrders = [];
+    filteredLocations.forEach(entry => {
+      entry.orders.forEach(order => {
+        // Flatten nested fields as needed for Excel
+        allOrders.push({
+          "Order ID": order._id,
+          "Unique ID": order.uniqueId,
+          "Date of Survey": order.dateOfSurvey,
+          "Surveyors": Array.isArray(order.surveyors) ? order.surveyors.join(", ") : order.surveyors,
+          "Confined Space Name/ID": order.confinedSpaceNameOrId,
+          "Building": order.building,
+          "Location Description": order.locationDescription,
+          "Confined Space Description": order.confinedSpaceDescription,
+          "Confined Space": order.confinedSpace ? "Yes" : "No",
+          "Permit Required": order.permitRequired ? "Yes" : "No",
+          "Entry Requirements": order.entryRequirements,
+          "Atmospheric Hazard": order.atmosphericHazard ? "Yes" : "No",
+          "Atmospheric Hazard Description": order.atmosphericHazardDescription,
+          "Engulfment Hazard": order.engulfmentHazard ? "Yes" : "No",
+          "Engulfment Hazard Description": order.engulfmentHazardDescription,
+          "Configuration Hazard": order.configurationHazard ? "Yes" : "No",
+          "Configuration Hazard Description": order.configurationHazardDescription,
+          "Other Recognized Hazards": order.otherRecognizedHazards ? "Yes" : "No",
+          "Other Hazards Description": order.otherHazardsDescription,
+          "PPE Required": order.ppeRequired ? "Yes" : "No",
+          "PPE List": order.ppeList,
+          "Forced Air Ventilation Sufficient": order.forcedAirVentilationSufficient ? "Yes" : "No",
+          "Dedicated Continuous Air Monitor": order.dedicatedContinuousAirMonitor ? "Yes" : "No",
+          "Warning Sign Posted": order.warningSignPosted ? "Yes" : "No",
+          "Other People Working Near Space": order.otherPeopleWorkingNearSpace ? "Yes" : "No",
+          "Can Others See Into Space": order.canOthersSeeIntoSpace ? "Yes" : "No",
+          "Contractors Enter Space": order.contractorsEnterSpace ? "Yes" : "No",
+          "Number Of Entry Points": order.numberOfEntryPoints,
+          "Notes": order.notes,
+          "Pictures": Array.isArray(order.pictures) ? order.pictures.join(", ") : order.pictures,
+        });
+      });
+    });
+
+    if (allOrders.length === 0) {
+      alert("No work orders to export.");
+      return;
+    }
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.json_to_sheet(allOrders);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "WorkOrders");
+
+    // Download as Excel file
+    XLSX.writeFile(wb, "confined-space-work-orders.xlsx");
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="px-4 py-8 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
@@ -1022,6 +1079,17 @@ export default function Dashboard() {
                 <span>Work Orders by Location</span>
               </h2>
               <div className="flex items-center space-x-3">
+                {/* Download All Button */}
+                <button
+                  onClick={handleDownloadAllExcel}
+                  className="text-sm font-medium text-gray-700 hover:gray-green-900 flex items-center bg-gray-50 px-3 py-2 rounded-md border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow transition-all"
+                  title="Download all work orders as Excel"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  Download Report
+                </button>
                 <a href="/admin/workorders" className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center bg-white px-3 py-2 rounded-md border border-blue-100 hover:border-blue-200 shadow-sm hover:shadow transition-all">
                   View All Orders
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
