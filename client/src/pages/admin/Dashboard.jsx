@@ -5,6 +5,7 @@ import { getWorkOrders, deleteWorkOrder, createWorkOrder, updateWorkOrder } from
 import { getLocations } from '../../services/locationService';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from 'react-toastify';
 
 // StatCard Component
 const StatCard = ({ name, value, icon, trend }) => {
@@ -592,10 +593,10 @@ export default function Dashboard() {
         ]);
         
         // Show success message
-        alert("Work order deleted successfully");
+        toast.success("Work order deleted successfully");
       } catch (error) {
         console.error("Error deleting work order:", error);
-        alert("Error deleting work order: " + (error.message || "Failed to delete work order"));
+        toast.error("Error deleting work order: " + (error.message || "Failed to delete work order"));
       }
     }
   }
@@ -934,7 +935,7 @@ export default function Dashboard() {
       doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      toast.error('Error generating PDF. Please try again.');
     }
   };
     const handleOrderSubmit = async (formData) => {
@@ -947,7 +948,7 @@ export default function Dashboard() {
       }
       
       // Show success message
-      alert(`Work order ${isEdit ? 'updated' : 'added'} successfully`);
+      toast.success(`Work order ${isEdit ? 'updated' : 'added'} successfully`);
       
       // Refresh data to update the UI
       await fetchData();
@@ -956,7 +957,7 @@ export default function Dashboard() {
       setShowOrderModal(false);
     } catch (error) {
       console.error("Error saving work order:", error);
-      alert("Error saving work order: " + error.message);
+      toast.error("Error saving work order: " + error.message);
     }
   }
 

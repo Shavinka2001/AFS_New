@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from 'react-toastify';
 
 
 const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) => {
@@ -318,7 +319,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      toast.error('Error generating PDF. Please try again.');
     }
   };// Handle empty orders array
   if (!orders || orders.length === 0) {
