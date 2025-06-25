@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import * as XLSX from "xlsx";
 
 // Configure axios defaults
 const api = axios.create({
@@ -251,6 +252,29 @@ const UserManagement = () => {
     }
   };
 
+  // Download users as Excel
+  const handleDownloadUsersExcel = () => {
+    if (!users || users.length === 0) {
+      alert("No users to export.");
+      return;
+    }
+    const allUsers = users.map(user => ({
+      "User ID": user._id,
+      "First Name": user.firstname || user.firstName,
+      "Last Name": user.lastname || user.lastName,
+      "Email": user.email,
+      "Phone": user.phone || "",
+      "Role": user.userType,
+      "Active": user.isActive ? "Yes" : "No",
+      "Created At": user.createdAt,
+      "Updated At": user.updatedAt,
+    }));
+    const ws = XLSX.utils.json_to_sheet(allUsers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users");
+    XLSX.writeFile(wb, "user-management.xlsx");
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
@@ -259,7 +283,6 @@ const UserManagement = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header Section */}
          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
-          
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -270,6 +293,16 @@ const UserManagement = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={handleDownloadUsersExcel}
+                className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-gray-200 rounded-xl shadow-lg text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 transform hover:scale-105"
+                title="Download users as Excel"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Download Users
+              </button>
               <button
                 onClick={() => setShowAddModal(true)}
                 className="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105"
