@@ -1,5 +1,23 @@
 const mongoose = require('mongoose');
 
+const BuildingSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+}, {
+  timestamps: true
+});
+
 const LocationSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -22,6 +40,7 @@ const LocationSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  buildings: [BuildingSchema],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

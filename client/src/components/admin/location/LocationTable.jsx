@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap, onAssignTechnicians }) => {
+const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap, onAssignTechnicians, onManageBuildings }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -76,8 +76,7 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap,
                     <span className="text-gray-500 text-xs">No technicians assigned</span>
                   )}
                 </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              </td>              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex justify-end space-x-2">
                   <button
                     onClick={() => onViewOnMap && onViewOnMap(location)}
@@ -96,6 +95,15 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap,
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h10m-5 4h5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => onManageBuildings && onManageBuildings(location)}
+                    className="text-purple-600 hover:text-purple-900"
+                    title="Manage buildings"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </button>
                   <button

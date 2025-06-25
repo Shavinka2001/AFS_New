@@ -6,13 +6,14 @@ import LocationTable from '../../components/admin/location/LocationTable';
 import LocationModal from '../../components/admin/location/LocationModal';
 import AssignedLocations from '../../components/admin/location/AssignedLocations';
 import AssignTechniciansModal from '../../components/admin/location/AssignTechniciansModal';
+import BuildingManagement from '../../components/admin/location/BuildingManagement';
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showBuildingModal, setShowBuildingModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isEdit, setIsEdit] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 7.8731, lng: 80.7718 }); // Default center (Sri Lanka)
@@ -97,10 +98,14 @@ const LocationManagement = () => {
       }
     }
   };
-
   const handleAssignTechnicians = (location) => {
     setSelectedLocation(location);
     setShowAssignModal(true);
+  };
+
+  const handleManageBuildings = (location) => {
+    setSelectedLocation(location);
+    setShowBuildingModal(true);
   };
 
   return (
@@ -117,14 +122,14 @@ const LocationManagement = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="order-2 lg:order-1">
           <div className="bg-white shadow rounded-lg p-4">
-            <h2 className="text-xl font-semibold mb-4">Locations</h2>
-            <LocationTable 
+            <h2 className="text-xl font-semibold mb-4">Locations</h2>            <LocationTable 
               locations={locations} 
               loading={loading}
               onEdit={handleEditLocation}
               onDelete={handleDeleteLocation}
               onViewOnMap={handleViewOnMap}
               onAssignTechnicians={handleAssignTechnicians}
+              onManageBuildings={handleManageBuildings}
             />
           </div>
         </div>
@@ -157,13 +162,20 @@ const LocationManagement = () => {
           mapRef={mapRef}
         />
       )}
-      
-      {showAssignModal && (
+        {showAssignModal && (
         <AssignTechniciansModal
           isOpen={showAssignModal}
           onClose={() => setShowAssignModal(false)}
           location={selectedLocation}
           onAssign={fetchLocations}
+        />
+      )}
+
+      {showBuildingModal && (
+        <BuildingManagement
+          isOpen={showBuildingModal}
+          onClose={() => setShowBuildingModal(false)}
+          location={selectedLocation}
         />
       )}
     </div>

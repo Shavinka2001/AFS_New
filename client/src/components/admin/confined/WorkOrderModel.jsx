@@ -37,10 +37,11 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     contractorsEnterSpace: false,
     numberOfEntryPoints: "",    notes: "",
     pictures: []
-  });
-    // State for user's assigned locations
+  });  // State for user's assigned locations
   const [assignedLocations, setAssignedLocations] = useState([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [availableBuildings, setAvailableBuildings] = useState([]);
 
   const [previewImages, setPreviewImages] = useState([]);
   // Camera states
@@ -78,15 +79,14 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
           // Alternative response format
           locationData = data.data;
           setAssignedLocations(data.data);
-        }
-
-        // If there's exactly one location, automatically set it in the form
+        }        // If there's exactly one location, automatically set it in the form
         if (locationData.length === 1) {
           const location = locationData[0];
+          setSelectedLocation(location);
+          setAvailableBuildings(location.buildings || []);
           setFormData(prevData => ({
             ...prevData,
             confinedSpaceNameOrId: location.name || location,
-            building: location.address || prevData.building,
             locationDescription: location.description || prevData.locationDescription
           }));
         }
@@ -98,8 +98,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     };
     
     fetchLocations();
-    
-    if (order) {
+      if (order) {
       // Ensure all boolean fields are properly initialized
       const booleanFields = [
         'confinedSpace',
@@ -132,43 +131,17 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
 
       setFormData(processedOrder);
       setPreviewImages(order.images || []);
+      
+      // If editing and we have assigned locations, find the location that matches the work order
+      if (assignedLocations.length > 0 && order.confinedSpaceNameOrId) {
+        const orderLocation = assignedLocations.find(loc => loc.name === order.confinedSpaceNameOrId);
+        if (orderLocation) {
+          setSelectedLocation(orderLocation);
+          setAvailableBuildings(orderLocation.buildings || []);
+        }
+      }
     }
-    
-    if (order) {
-      // Ensure all boolean fields are properly initialized
-      const booleanFields = [
-        'confinedSpace',
-        'permitRequired',
-        'atmosphericHazard',
-        'engulfmentHazard',
-        'configurationHazard',
-        'otherRecognizedHazards',
-        'ppeRequired',
-        'forcedAirVentilationSufficient',
-        'dedicatedContinuousAirMonitor',
-        'warningSignPosted',
-        'otherPeopleWorkingNearSpace',
-        'canOthersSeeIntoSpace',
-        'contractorsEnterSpace'
-      ];
-
-      const processedOrder = {
-        ...order,
-        dateOfSurvey: order.dateOfSurvey?.slice(0, 10) || "",
-        surveyors: Array.isArray(order.surveyors) ? order.surveyors : [],
-        technician: technicianName, // Add the technician name
-        images: order.images || []
-      };
-
-      // Ensure boolean fields are properly set
-      booleanFields.forEach(field => {
-        processedOrder[field] = Boolean(processedOrder[field]);
-      });
-
-      setFormData(processedOrder);
-      setPreviewImages(order.images || []);
-    }
-  }, [order]);
+  }, [order, assignedLocations]);
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     
@@ -184,8 +157,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       setFormData(prev => ({
         ...prev,
         surveyors: selectedOptions
-      }));
-    } else if (name === "confinedSpaceNameOrId") {
+      }));    } else if (name === "confinedSpaceNameOrId") {
       // When a location is selected from the dropdown
       setFormData(prev => ({
         ...prev,
@@ -194,17 +166,19 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       
       // If we have location data and a value was selected, populate related fields
       if (value && assignedLocations.length > 0) {
-        const selectedLocation = assignedLocations.find(loc => loc.name === value);
-        if (selectedLocation) {
+        const selectedLocationData = assignedLocations.find(loc => loc.name === value);
+        if (selectedLocationData) {
+          setSelectedLocation(selectedLocationData);
+          setAvailableBuildings(selectedLocationData.buildings || []);
           // Populate additional fields from the selected location
           setFormData(prev => ({
             ...prev,
-            building: selectedLocation.address || prev.building,
-            locationDescription: selectedLocation.description || prev.locationDescription
+            building: '', // Reset building selection when location changes
+            locationDescription: selectedLocationData.description || prev.locationDescription
           }));
         }
       }
-    } else {
+    }else {
       setFormData(prev => ({
         ...prev,
         [name]: value
@@ -575,7 +549,22 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
                     <span className="text-sm text-gray-700">Loading locations...</span>
                   </div>
-                ) : assignedLocations.length > 0 ? (
+                ) : assignedLocations.length > 1 ? (
+                  <select 
+                    name="confinedSpaceNameOrId" 
+                    value={formData.confinedSpaceNameOrId || ""} 
+                    onChange={handleChange}
+                    required 
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select a location...</option>
+                    {assignedLocations.map((location, index) => (
+                      <option key={location._id || index} value={location.name || location}>
+                        {location.name || location}
+                      </option>
+                    ))}
+                  </select>
+                ) : assignedLocations.length === 1 ? (
                   <input 
                     type="text" 
                     name="confinedSpaceNameOrId" 
@@ -596,15 +585,43 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                 )}
               </div>              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Building *</label>
-                {assignedLocations.length > 0 ? (
-                  <input 
-                    type="text" 
-                    name="building" 
-                    value={formData.building || ""} 
-                    readOnly
-                    required 
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
-                  />
+                {assignedLocations.length > 0 && selectedLocation ? (
+                  <>
+                    {availableBuildings.length > 0 ? (
+                      <select 
+                        name="building" 
+                        value={formData.building || ""} 
+                        onChange={handleChange}
+                        required 
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                      >
+                        <option value="">Select a building...</option>
+                        {availableBuildings
+                          .filter(building => building.isActive)
+                          .map((building, index) => (
+                            <option key={building._id || index} value={building.name}>
+                              {building.name}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    ) : (
+                      <>
+                        <input 
+                          type="text" 
+                          name="building" 
+                          value={formData.building || ""} 
+                          onChange={handleChange}
+                          placeholder="Enter building name manually" 
+                          required 
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
+                        />
+                        <p className="text-sm text-amber-600 mt-1">
+                          No buildings configured for this location. Please enter the building name manually or contact your administrator.
+                        </p>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <input 
                     type="text" 
@@ -615,7 +632,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                   />
                 )}
-              </div>              <div className="md:col-span-2">
+              </div><div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location Description</label>
                 {assignedLocations.length > 0 ? (
                   <input 

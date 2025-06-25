@@ -357,3 +357,218 @@ exports.getAssignedLocations = async (req, res) => {
     });
   }
 };
+
+// Add building to location
+exports.addBuildingToLocation = async (req, res) => {
+  try {
+    const { locationId } = req.params;
+    const { name, description } = req.body;
+    
+    // Basic validation
+    if (!name) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Building name is required' 
+      });
+    }
+    
+    const location = await Location.findById(locationId);
+    
+    if (!location) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Location not found' 
+      });
+    }
+    
+    // Only allow the creator or admins to add buildings
+    if (location.createdBy.toString() !== req.user.userId && !req.user.isAdmin) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to add buildings to this location' 
+      });
+    }
+    
+    // Check if building name already exists in this location
+    const existingBuilding = location.buildings.find(building => 
+      building.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (existingBuilding) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'A building with this name already exists in this location' 
+      });
+    }
+    
+    // Add new building
+    location.buildings.push({
+      name: name.trim(),
+      description: description || '',
+      isActive: true
+    });
+    
+    await location.save();
+    
+    res.status(201).json({
+      success: true,
+      message: 'Building added successfully',
+      location
+    });
+  } catch (err) {
+    console.error('Error adding building to location:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Error adding building to location' 
+    });
+  }
+};
+
+// Update building in location
+exports.updateBuildingInLocation = async (req, res) => {
+  try {
+    const { locationId, buildingId } = req.params;
+    const { name, description, isActive } = req.body;
+    
+    const location = await Location.findById(locationId);
+    
+    if (!location) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Location not found' 
+      });
+    }
+    
+    // Only allow the creator or admins to update buildings
+    if (location.createdBy.toString() !== req.user.userId && !req.user.isAdmin) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to update buildings in this location' 
+      });
+    }
+    
+    const building = location.buildings.id(buildingId);
+    
+    if (!building) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Building not found' 
+      });
+    }
+    
+    // Check if building name already exists in this location (excluding current building)
+    if (name && name !== building.name) {
+      const existingBuilding = location.buildings.find(b => 
+        b._id.toString() !== buildingId && 
+        b.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingBuilding) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'A building with this name already exists in this location' 
+        });
+      }
+    }
+    
+    // Update building fields
+    if (name) building.name = name.trim();
+    if (description !== undefined) building.description = description;
+    if (isActive !== undefined) building.isActive = isActive;
+    
+    await location.save();
+    
+    res.json({
+      success: true,
+      message: 'Building updated successfully',
+      location
+    });
+  } catch (err) {
+    console.error('Error updating building:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Error updating building' 
+    });
+  }
+};
+
+// Delete building from location
+exports.deleteBuildingFromLocation = async (req, res) => {
+  try {
+    const { locationId, buildingId } = req.params;
+    
+    const location = await Location.findById(locationId);
+    
+    if (!location) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Location not found' 
+      });
+    }
+    
+    // Only allow the creator or admins to delete buildings
+    if (location.createdBy.toString() !== req.user.userId && !req.user.isAdmin) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to delete buildings from this location' 
+      });
+    }
+    
+    const building = location.buildings.id(buildingId);
+    
+    if (!building) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Building not found' 
+      });
+    }
+    
+    // Remove building from the location
+    location.buildings.pull(buildingId);
+    await location.save();
+    
+    res.json({
+      success: true,
+      message: 'Building deleted successfully',
+      location
+    });
+  } catch (err) {
+    console.error('Error deleting building:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Error deleting building' 
+    });
+  }
+};
+
+// Get buildings for a location
+exports.getBuildingsForLocation = async (req, res) => {
+  try {
+    const { locationId } = req.params;
+    
+    const location = await Location.findById(locationId);
+    
+    if (!location) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Location not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      buildings: location.buildings,
+      location: {
+        _id: location._id,
+        name: location.name,
+        address: location.address
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching buildings:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Error fetching buildings' 
+    });
+  }
+};
