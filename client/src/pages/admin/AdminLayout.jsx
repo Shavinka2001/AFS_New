@@ -123,11 +123,14 @@ function AdminLayout() {
                 <button onClick={() => setSidebarOpen(true)}>
                     <Bars3Icon className="h-6 w-6 text-gray-700" />
                 </button>
-            </header>            {/* Mobile Sidebar Drawer */}
+            </header>
+            {/* Mobile Sidebar Drawer */}
             {sidebarOpen && (
-                <div className="fixed inset-0 z-50 flex">
-                    <div className="relative z-50 w-72 bg-white shadow-xl flex flex-col h-full">
-                    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
+                <div className="fixed inset-0 z-50 flex pointer-events-none">
+                    <div
+                        className="relative z-50 w-72 bg-white shadow-xl flex flex-col h-full pointer-events-auto"
+                        style={{ transition: 'transform 0.3s', transform: 'translateX(0)' }}
+                    >
                         <div className="p-6 border-b border-gray-200">
                             <div className="flex justify-between items-center">
                                 <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent">Menu</h2>
@@ -138,7 +141,21 @@ function AdminLayout() {
                         </div>
                         <nav className="flex-1 p-6 space-y-2">
                             {navigation.map((item) => (
-                                <SidebarNavLink key={item.name} item={item} />
+                                <NavLink
+                                    key={item.name}
+                                    to={item.to}
+                                    className={({ isActive }) =>
+                                        `flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${
+                                            isActive
+                                                ? 'bg-gradient-to-r from-gray-900 to-gray-800 text-white font-semibold shadow-lg'
+                                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                                        }`
+                                    }
+                                    onClick={() => setSidebarOpen(false)}
+                                >
+                                    <item.icon className="h-5 w-5" />
+                                    {item.name}
+                                </NavLink>
                             ))}
                         </nav>
                         <div className="p-6 border-t border-gray-200">
@@ -154,7 +171,10 @@ function AdminLayout() {
                                 </div>
                             </div>
                             <button
-                                onClick={handleLogout}
+                                onClick={() => {
+                                    setSidebarOpen(false);
+                                    handleLogout();
+                                }}
                                 className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-300 shadow-sm"
                             >
                                 <ArrowRightOnRectangleIcon className="h-5 w-5" />
@@ -162,7 +182,6 @@ function AdminLayout() {
                             </button>
                         </div>
                     </div>
-                    <div className="flex-1 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
                 </div>
             )}
 
