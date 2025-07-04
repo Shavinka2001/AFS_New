@@ -251,7 +251,13 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
 
   // Camera functions
   const startCamera = async () => {
-    try {      const mediaStream = await navigator.mediaDevices.getUserMedia({
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error('Camera access is not supported in this browser or context.');
+      console.error('navigator.mediaDevices.getUserMedia is not available.');
+      return;
+    }
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment', // 'environment' for back camera (if available)
           width: { ideal: 1280 },
@@ -259,9 +265,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         },
         audio: false
       });
-      
       setStream(mediaStream);
-      
       // Once camera is opened
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -270,8 +274,8 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     } catch (error) {
       console.error('Error accessing camera:', error);
       toast.error('Could not access camera. Please check permissions and try again.');
-    }
-  };
+    }
+  };
 
   const stopCamera = () => {
     if (stream) {

@@ -4,7 +4,7 @@ const proxy = require("express-http-proxy");
 const { applyRateLimiter } = require("./utils/rateLimitter")
 const app = express();
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://4.236.138.4'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -15,7 +15,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 //host.docker.internal
 // app.use("/api/users", applyRateLimiter, proxy("host.docker.internal:5001"));
-app.use("/api/users", applyRateLimiter, proxy("http://localhost:5001"));
+app.use("/api/auth", applyRateLimiter, proxy("http://localhost:5000"));
+app.use("/api/users", applyRateLimiter, proxy("http://localhost:5000/api/auth"));
 app.use(
   "/api/order",
   applyRateLimiter,
@@ -24,7 +25,7 @@ app.use(
 app.use(
   "/api/locations",
   applyRateLimiter,
-  proxy("http://localhost:5003")
+  proxy("http://localhost:5000")
 );
 
 //Exporting app to be used by the server.js

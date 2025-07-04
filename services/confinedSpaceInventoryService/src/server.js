@@ -36,7 +36,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/', orderRoutes);
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/api/order', (req, res) => {
   res.send('Confined Space Inventory API');
 });
 
