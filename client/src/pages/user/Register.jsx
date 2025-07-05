@@ -18,7 +18,7 @@ const Register = () => {
   const navigate = useNavigate();
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Special handling for email field to auto-append domain
     if (name === 'email') {
       // If user types @ character, auto-complete with full domain
@@ -46,12 +46,34 @@ const Register = () => {
       }
     }
     
+    // Special handling for phone field to enforce "+1" and 10 digits
+    if (name === "phone") {
+      let phoneValue = value;
+
+      // Always start with +1
+      if (!phoneValue.startsWith("+1")) {
+        phoneValue = "+1" + phoneValue.replace(/^\+?1?/, "");
+      }
+
+      // Only allow digits after +1, max 10 digits
+      let digits = phoneValue.slice(2).replace(/\D/g, "").slice(0, 10);
+      phoneValue = "+1" + digits;
+
+      setForm({ ...form, [name]: phoneValue });
+      return;
+    }
+
     // Default handling for all other fields
     setForm({ ...form, [name]: value });
   };
   // Function to validate email format
   const validateEmail = (email) => {
     return email.toLowerCase().endsWith('@agilefacilities.com');
+  };
+
+  const validatePhone = (phone) => {
+    // Must start with +1 and have exactly 10 digits after
+    return /^\+1\d{10}$/.test(phone);
   };
 
   const handleSubmit = async (e) => {
@@ -69,10 +91,16 @@ const Register = () => {
       setMessage({ type: "error", text: "Passwords do not match" });
       return;
     }
+
+    // Validate phone number
+    if (!validatePhone(form.phone)) {
+      setMessage({ type: "error", text: "Phone number must start with +1 and be 10 digits long." });
+      return;
+    }
     
     setLoading(true);
     try {      // Use the correct backend URL for registration
-      const res = await fetch("http://localhost:5001/api/auth/register", {
+      const res = await fetch(`${import.meta.env.VITE_AUTH_API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -171,7 +199,7 @@ const Register = () => {
 
           <div>
             <label htmlFor="phone" className="block text-[#19376d] font-semibold mb-1">
-              Phone Number
+              Phone Number <span className="text-sm font-normal text-gray-600">(Format: +1XXXXXXXXXX)</span>
             </label>
             <input
               type="text"
@@ -179,9 +207,15 @@ const Register = () => {
               id="phone"
               value={form.phone}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-[#19376d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19376d] transition"
+              className={`w-full px-4 py-2 border ${!form.phone || validatePhone(form.phone) ? 'border-[#19376d]' : 'border-red-500'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#19376d] transition`}
               required
+              maxLength={12} // +1 plus 10 digits
+              pattern="\+1\d{10}"
+              inputMode="numeric"
             />
+            {form.phone && !validatePhone(form.phone) && (
+              <p className="mt-1 text-sm text-red-600">Phone number must start with +1 and be 10 digits long.</p>
+            )}
           </div>          <div className="flex gap-4">
             <div className="w-1/2">
               <label htmlFor="password" className="block text-[#19376d] font-semibold mb-1">

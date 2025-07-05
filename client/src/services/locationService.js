@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/locations';
+const API_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5000';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,7 +20,7 @@ const authHeader = () => {
 // Create a new location
 export const createLocation = async (locationData) => {
   try {
-    const response = await api.post('/', locationData, {
+    const response = await api.post('/api/locations', locationData, {
       headers: authHeader(),
     });
     return response.data;
@@ -37,7 +37,7 @@ export const createLocation = async (locationData) => {
 // Get all locations
 export const getLocations = async (page = 1, limit = 10) => {
   try {
-    const response = await api.get('/', {
+    const response = await api.get('/api/locations', {
       headers: authHeader(),
       params: { page, limit }
     });
@@ -55,7 +55,7 @@ export const getLocations = async (page = 1, limit = 10) => {
 // Get a single location by ID
 export const getLocationById = async (id) => {
   try {
-    const response = await api.get(`/${id}`, {
+    const response = await api.get(`/api/locations/${id}`, {
       headers: authHeader(),
     });
     return response.data;
@@ -72,7 +72,7 @@ export const getLocationById = async (id) => {
 // Update a location
 export const updateLocation = async (id, locationData) => {
   try {
-    const response = await api.put(`/${id}`, locationData, {
+    const response = await api.put(`/api/locations/${id}`, locationData, {
       headers: authHeader(),
     });
     return response.data;
@@ -89,7 +89,7 @@ export const updateLocation = async (id, locationData) => {
 // Delete a location
 export const deleteLocation = async (id) => {
   try {
-    const response = await api.delete(`/${id}`, {
+    const response = await api.delete(`/api/locations/${id}`, {
       headers: authHeader(),
     });
     return response.data;
@@ -106,7 +106,7 @@ export const deleteLocation = async (id) => {
 // Search locations
 export const searchLocations = async (searchParams) => {
   try {
-    const response = await api.get('/search', {
+    const response = await api.get('/api/locations/search', {
       headers: authHeader(),
       params: searchParams
     });
@@ -124,7 +124,7 @@ export const searchLocations = async (searchParams) => {
 // Get nearby locations
 export const getNearbyLocations = async (latitude, longitude, maxDistance) => {
   try {
-    const response = await api.get('/nearby', {
+    const response = await api.get('/api/locations/nearby', {
       headers: authHeader(),
       params: { latitude, longitude, maxDistance }
     });
@@ -142,7 +142,7 @@ export const getNearbyLocations = async (latitude, longitude, maxDistance) => {
 // Get locations assigned to the logged-in technician
 export const getAssignedLocations = async () => {
   try {
-    const response = await api.get('/assigned/me', {
+    const response = await api.get('/api/locations/assigned/me', {
       headers: authHeader(),
     });
     return response.data;
@@ -159,7 +159,7 @@ export const getAssignedLocations = async () => {
 // Assign technicians to a location
 export const assignTechnicians = async (locationId, technicianIds) => {
   try {
-    const response = await api.post(`/${locationId}/assign-technicians`, 
+    const response = await api.post(`/api/locations/${locationId}/assign-technicians`, 
       { technicianIds },
       { headers: authHeader() }
     );
@@ -178,7 +178,7 @@ export const assignTechnicians = async (locationId, technicianIds) => {
 export const detachTechnicianFromLocation = async (locationId) => {
   try {
     // We're using the same endpoint but passing an empty array to remove the technician
-    const response = await api.post(`/${locationId}/assign-technicians`, 
+    const response = await api.post(`/api/locations/${locationId}/assign-technicians`, 
       { technicianIds: [] },
       { headers: authHeader() }
     );

@@ -6,7 +6,7 @@ const emitSessionTimeout = () => {
     window.dispatchEvent(new CustomEvent(SESSION_TIMEOUT_EVENT));
 };
 
-const API_URL = 'http://localhost:5001/api/auth';
+const API_URL = import.meta.env.VITE_AUTH_API_URL || '/api/auth';
 
 // Token management - Moving these functions up so they're defined before being used
 const getAccessToken = () => {
@@ -278,7 +278,7 @@ const getTechnicianById = async (id) => {
         let token = localStorage.getItem("token") || sessionStorage.getItem("token");
         token = token?.replace(/^"|"$/g, '');
         
-        const response = await axios.get(`http://localhost:5001/api/auth/${id}`, {
+        const response = await axios.get(`${API_URL}/${id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'

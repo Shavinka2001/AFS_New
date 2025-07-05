@@ -70,7 +70,10 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap,
                       </svg>
                     </button>
                     <span className="text-sm font-bold text-gray-900 cursor-pointer hover:underline" onClick={() => toggleExpand(location._id)}>
-                      {location.name}
+                      {/* Show saved name if deleted */}
+                      {location.isDeleted
+                        ? (location.confinedSpaceNameOrId || location.name)
+                        : location.name}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500">
@@ -80,7 +83,12 @@ const LocationTable = ({ locations = [], loading, onEdit, onDelete, onViewOnMap,
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{location.address}</div>
+                  <div className="text-sm text-gray-900">
+                    {/* Show saved address/description if deleted */}
+                    {location.isDeleted
+                      ? (location.locationDescription || location.address)
+                      : location.address}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

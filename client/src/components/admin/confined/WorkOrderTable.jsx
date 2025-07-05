@@ -3,9 +3,47 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from 'react-toastify';
 
+const SORT_OPTIONS = [
+  { value: "date_desc", label: "Date (Newest First)" },
+  { value: "date_asc", label: "Date (Oldest First)" },
+  { value: "name_asc", label: "Space Name (A-Z)" },
+  { value: "name_desc", label: "Space Name (Z-A)" },
+  { value: "building_asc", label: "Building (A-Z)" },
+  { value: "building_desc", label: "Building (Z-A)" },
+];
 
 const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) => {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sortBy, setSortBy] = useState("date_desc");
+
+  // Sorting logic
+  const getSortedOrders = () => {
+    if (!orders) return [];
+    const sorted = [...orders];
+    switch (sortBy) {
+      case "date_asc":
+        sorted.sort((a, b) => (a.dateOfSurvey || "").localeCompare(b.dateOfSurvey || ""));
+        break;
+      case "date_desc":
+        sorted.sort((a, b) => (b.dateOfSurvey || "").localeCompare(a.dateOfSurvey || ""));
+        break;
+      case "name_asc":
+        sorted.sort((a, b) => (a.confinedSpaceNameOrId || "").localeCompare(b.confinedSpaceNameOrId || ""));
+        break;
+      case "name_desc":
+        sorted.sort((a, b) => (b.confinedSpaceNameOrId || "").localeCompare(a.confinedSpaceNameOrId || ""));
+        break;
+      case "building_asc":
+        sorted.sort((a, b) => (a.building || "").localeCompare(b.building || ""));
+        break;
+      case "building_desc":
+        sorted.sort((a, b) => (b.building || "").localeCompare(a.building || ""));
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  };
 
   // Function to determine if this row should be highlighted based on search params
   const isHighlighted = (order) => {
@@ -21,6 +59,11 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
         
         if (key === 'confinedSpaceNameOrId' && order.confinedSpaceNameOrId && 
             order.confinedSpaceNameOrId.toLowerCase().includes(lowerValue)) {
+          return true;
+        }
+        // Also match deleted location's saved name
+        if (key === 'confinedSpaceNameOrId' && order.location && order.location.isDeleted &&
+            order.location.confinedSpaceNameOrId && order.location.confinedSpaceNameOrId.toLowerCase().includes(lowerValue)) {
           return true;
         }
         
@@ -44,7 +87,13 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       // Add form header
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text("Form No: CS-" + order._id?.slice(-6) || 'N/A', 14, 25);
+      // Add uniqueId to Form No if available
+      doc.text(
+        "Form No: CS-" +
+        (order.uniqueId ? order.uniqueId : (order._id?.slice(-6) || 'N/A')),
+        14,
+        25
+      );
       doc.text("Date: " + order.dateOfSurvey?.slice(0, 10) || 'N/A', 14, 30);
       doc.text("Surveyors: " + order.surveyors?.join(", ") || 'N/A', 14, 35);
 
@@ -87,8 +136,8 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       currentY += 5;
       
       const spaceClassification = [
-        ['Is this a Confined Space:', order.confinedSpace ? '☒ Yes' : '☐ No'],
-        ['Permit Required:', order.permitRequired ? '☒ Yes' : '☐ No'],
+        ['Is this a Confined Space:', order.confinedSpace ? 'Yes' : 'No'],
+        ['Permit Required:', order.permitRequired ? 'Yes' : 'No'],
         ['Entry Requirements:', order.entryRequirements || 'N/A']
       ];
 
@@ -113,13 +162,13 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       currentY += 5;
       
       const hazardsAssessment = [
-        ['Atmospheric Hazard:', order.atmosphericHazard ? '☒ Yes' : '☐ No'],
+        ['Atmospheric Hazard:', order.atmosphericHazard ? 'Yes' : 'No'],
         ['Description:', order.atmosphericHazardDescription || 'N/A'],
-        ['Engulfment Hazard:', order.engulfmentHazard ? '☒ Yes' : '☐ No'],
+        ['Engulfment Hazard:', order.engulfmentHazard ? 'Yes' : 'No'],
         ['Description:', order.engulfmentHazardDescription || 'N/A'],
-        ['Configuration Hazard:', order.configurationHazard ? '☒ Yes' : '☐ No'],
+        ['Configuration Hazard:', order.configurationHazard ? 'Yes' : 'No'],
         ['Description:', order.configurationHazardDescription || 'N/A'],
-        ['Other Recognized Hazards:', order.otherRecognizedHazards ? '☒ Yes' : '☐ No'],
+        ['Other Recognized Hazards:', order.otherRecognizedHazards ? 'Yes' : 'No'],
         ['Description:', order.otherHazardsDescription || 'N/A']
       ];
 
@@ -144,11 +193,11 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       currentY += 5;
       
       const safetyMeasures = [
-        ['PPE Required:', order.ppeRequired ? '☒ Yes' : '☐ No'],
+        ['PPE Required:', order.ppeRequired ? 'Yes' : 'No'],
         ['PPE List:', order.ppeList || 'N/A'],
-        ['Forced Air Ventilation:', order.forcedAirVentilationSufficient ? '☒ Sufficient' : '☐ Insufficient'],
-        ['Dedicated Air Monitor:', order.dedicatedContinuousAirMonitor ? '☒ Yes' : '☐ No'],
-        ['Warning Sign Posted:', order.warningSignPosted ? '☒ Yes' : '☐ No'],
+        ['Forced Air Ventilation:', order.forcedAirVentilationSufficient ? 'Sufficient' : 'Insufficient'],
+        ['Dedicated Air Monitor:', order.dedicatedContinuousAirMonitor ? 'Yes' : 'No'],
+        ['Warning Sign Posted:', order.warningSignPosted ? 'Yes' : 'No'],
         ['Number of Entry Points:', order.numberOfEntryPoints || 'N/A']
       ];
 
@@ -173,9 +222,9 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
       currentY += 5;
       
       const additionalInfo = [
-        ['Other People Working Near Space:', order.otherPeopleWorkingNearSpace ? '☒ Yes' : '☐ No'],
-        ['Can Others See into Space:', order.canOthersSeeIntoSpace ? '☒ Yes' : '☐ No'],
-        ['Do Contractors Enter Space:', order.contractorsEnterSpace ? '☒ Yes' : '☐ No'],
+        ['Other People Working Near Space:', order.otherPeopleWorkingNearSpace ? 'Yes' : 'No'],
+        ['Can Others See into Space:', order.canOthersSeeIntoSpace ? 'Yes' : 'No'],
+        ['Do Contractors Enter Space:', order.contractorsEnterSpace ? 'Yes' : 'No'],
         ['Notes:', order.notes || 'N/A']
       ];
 
@@ -212,7 +261,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
           const imageUrl = typeof imgPath === 'string'
             ? (imgPath.startsWith('data:') ? imgPath
               : imgPath.startsWith('http') ? imgPath
-              : `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}`)
+              : `${import.meta.env.VITE_ORDER_API_URL || 'http://localhost:5002'}${imgPath.startsWith('/') ? '' : '/'}${imgPath}`)
             : imgPath;
           const promise = new Promise((resolve) => {
             const img = new window.Image();
@@ -221,8 +270,9 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
               // High quality canvas
               let imgWidth = img.width;
               let imgHeight = img.height;
-              const maxWidth = 170;
-              const maxHeight = 120;
+              // Smaller size for PDF images
+              const maxWidth = 120; // reduced from 170
+              const maxHeight = 80; // reduced from 120
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
                 const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
                 imgWidth *= ratio;
@@ -355,8 +405,27 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
     );
   };
   
+  // --- Sorting UI ---
   return (
     <>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 mr-2 mb-4 gap-2">
+        <h2 className="text-xl font-bold text-gray-900">Confined Space Work Orders</h2>
+        <div className="flex items-center gap-2">
+          <label htmlFor="sort-orders" className="text-sm text-gray-700 font-medium mr-1">
+            Sort by:
+          </label>
+          <select
+            id="sort-orders"
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            {SORT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -370,7 +439,7 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders.map(order => (
+              {getSortedOrders().map(order => (
                 <tr key={order._id} className={`hover:bg-gray-50 transition-colors duration-200 ${isHighlighted(order) ? 'bg-yellow-50' : ''}`}>                  <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{searchParams?.id ? 
                         highlightMatch(order.uniqueId || order._id?.slice(-4).padStart(4, '0'), searchParams.id) : 
@@ -406,16 +475,19 @@ const WorkOrderTable = ({ orders = [], onEdit, onDelete, searchParams = {} }) =>
                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                      </button>                      {/* Remove or disable Edit button for admin */}
-                      {/* <button
-                        onClick={() => handleEdit(order)}
-                        className="p-1.5 sm:p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-                        title="Edit"
-                      >
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button> */}
+                      </button>
+                      {/* Show Edit button only if onEdit is provided (technician side) */}
+                      {onEdit && (
+                        <button
+                          onClick={() => handleEdit(order)}
+                          className="p-1.5 sm:p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                          title="Edit"
+                        >
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(order._id)}
                         className="p-1.5 sm:p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"

@@ -77,8 +77,8 @@ export const AuthProvider = ({ children }) => {
     const handleSessionTimeout = () => {
       setIsAuthenticated(false);
       setUser(null);
-      // We don't call logout here as the event handler in SessionTimeoutAlert 
-      // will handle that, we just update the state
+      // Always logout and navigate to login page on session timeout
+      logout(navigate);
     };
 
     window.addEventListener(SESSION_TIMEOUT_EVENT, handleSessionTimeout);
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [navigate]);
   // Add isAdmin helper function
-  const isAdmin = user?.isAdmin || user?.userType === 'admin';
+  const isAdmin = !!(user?.isAdmin || user?.userType === 'admin');
   
   const value = {
     isAuthenticated,

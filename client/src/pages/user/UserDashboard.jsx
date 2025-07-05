@@ -604,69 +604,74 @@ function TechnicianDashboard() {
                                     <p className="mt-4 text-gray-700 text-sm sm:text-base">No locations have been assigned to you yet. Please contact an administrator to get access to locations.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                                <div className="flex flex-col gap-6">
                                     {assignedLocations.map((location) => (
-                                        <div key={location._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                                            <div className="p-4 sm:p-6">
-                                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center justify-between flex-wrap gap-2">
-                                                    <span className="truncate">{location.name}</span>
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                        location.isActive 
-                                                            ? 'bg-green-100 text-green-800' 
-                                                            : 'bg-red-100 text-red-800'
-                                                    }`}>
-                                                        {location.isActive ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </h3>
-                                                
-                                                {/* Map View */}
-                                                <div className="mt-4">
-                                                    <LocationMapView location={location} height="200px" />
-                                                </div>
-                                                
-                                                <div className="mt-4 space-y-3">
-                                                    <div className="flex items-center text-gray-700">
-                                                        <svg className="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                                        </svg>
-                                                        <span className="text-sm">{location.address || 'No address provided'}</span>
-                                                    </div>
-                                                    
-                                                    <div className="flex items-center text-gray-700">
-                                                        <svg className="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        </svg>
-                                                        <span className="text-sm">
-                                                            {location.latitude 
-                                                                ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` 
-                                                                : 'No coordinates available'}
+                                        <div
+                                            key={location._id}
+                                            className="flex flex-col md:flex-row bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow duration-200"
+                                        >
+                                            {/* Map Section */}
+                                            <div className="md:w-2/5 w-full min-h-[220px] bg-gray-50 flex items-center justify-center">
+                                                <LocationMapView location={location} height="220px" />
+                                            </div>
+                                            {/* Info Section */}
+                                            <div className="flex-1 flex flex-col justify-between p-6">
+                                                <div>
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                                        <h3 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                                                            {location.name}
+                                                        </h3>
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                                            location.isActive
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {location.isActive ? 'Active' : 'Inactive'}
                                                         </span>
                                                     </div>
-                                                </div>
-                                                
-                                                {location.description && (
-                                                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                                                        <h4 className="text-sm font-medium text-gray-900">Description:</h4>
-                                                        <p className="text-sm text-gray-700 mt-1">{location.description}</p>
+                                                    <div className="mt-2 flex flex-wrap gap-4">
+                                                        <div className="flex items-center text-gray-700">
+                                                            <svg className="h-5 w-5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                                            </svg>
+                                                            <span className="text-sm">{location.address || 'No address provided'}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-gray-700">
+                                                            <svg className="h-5 w-5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            </svg>
+                                                            <span className="text-sm">
+                                                                {location.latitude
+                                                                    ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+                                                                    : 'No coordinates'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                )}                                                  <div className="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200 space-y-2 sm:space-y-3">
+                                                    {location.description && (
+                                                        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                            <h4 className="text-sm font-medium text-gray-900 mb-1">Description:</h4>
+                                                            <p className="text-sm text-gray-700">{location.description}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="mt-6 flex flex-col sm:flex-row gap-3">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedWorkOrder(null);
                                                             setShowWorkOrderModal(true);
                                                         }}
-                                                        className="w-full px-3 sm:px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all flex items-center justify-center space-x-2 text-sm sm:text-base"
+                                                        className="flex-1 px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold shadow"
                                                     >
-                                                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                                         </svg>
                                                         <span>Create Work Order</span>
                                                     </button>
-                                                      <button
+                                                    <button
                                                         onClick={() => handleCloseWork(location._id)}
                                                         disabled={closingLocationId === location._id}
-                                                        className={`w-full px-3 sm:px-4 py-2 border border-red-600 text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${
+                                                        className={`flex-1 px-4 py-2 border border-red-600 text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold shadow ${
                                                             closingLocationId === location._id ? 'opacity-50 cursor-not-allowed' : ''
                                                         }`}
                                                     >

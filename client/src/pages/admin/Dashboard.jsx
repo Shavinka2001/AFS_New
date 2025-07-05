@@ -5,8 +5,6 @@ import { getWorkOrders, deleteWorkOrder, createWorkOrder, updateWorkOrder } from
 import { getLocations } from '../../services/locationService';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { toast } from 'react-toastify';
-import * as XLSX from "xlsx";
 
 // StatCard Component
 const StatCard = ({ name, value, icon, trend }) => {
@@ -92,13 +90,31 @@ const UserTable = ({ users, loading }) => {
 
 // Location Card Component for Dashboard
 const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, onDeleteOrder, downloadSinglePDF }) => {
-  const [searchTerm, setSearchTerm] = useState('');  // Filter orders based on search term - only search by sequence number
+  const [searchTerm, setSearchTerm] = useState('');
+    // Filter orders based on search term
   const filteredOrders = searchTerm.trim() ? 
-    orders.filter((order, index) => {
-      const sequenceNumber = String(index + 1);
+    orders.filter(order => {
+      const lowerCaseSearch = searchTerm.toLowerCase();
       
-      // Search only by exact sequence number match
-      return sequenceNumber === searchTerm;
+      // Prioritize exact or partial ID matches
+      if (order.uniqueId && order.uniqueId.toLowerCase().includes(lowerCaseSearch)) {
+        return true;
+      }
+      
+      // Also check database ID (partial matches)
+      if (order._id && order._id.toLowerCase().includes(lowerCaseSearch)) {
+        return true;
+      }
+      
+      // Fall back to other fields if no ID match
+      return (
+        // Search by confined space name/ID
+        (order.confinedSpaceNameOrId && order.confinedSpaceNameOrId.toLowerCase().includes(lowerCaseSearch)) ||
+        // Search by building
+        (order.building && order.building.toLowerCase().includes(lowerCaseSearch)) ||
+        // Search by date
+        (order.dateOfSurvey && order.dateOfSurvey.includes(lowerCaseSearch))
+      );
     }) : orders;
 
   return (
@@ -133,9 +149,10 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                   <svg className="h-3 w-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                </div>                <input
+                </div>
+                <input
                   type="text"
-                  placeholder="Search by sequence number (1, 2, 3...)"
+                  placeholder="Search by ID, name, or date..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-2 py-1.5 pl-7 pr-8 text-xs rounded-md border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none bg-transparent"
@@ -170,16 +187,13 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
               {/* Scrollable container for all orders */}            <div className="flex-1 overflow-y-auto h-[180px] overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300">
               <table className="min-w-full text-xs border-collapse table-fixed">
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {/* Display filtered orders */}                  {filteredOrders.length > 0 ? (                    filteredOrders.map((order) => {
-                      // Find the original index of this order in the unfiltered array
-                      const originalIndex = orders.findIndex(o => o._id === order._id);
-                      const sequenceNumber = originalIndex + 1;
-                      
-                      return (
-                      <tr 
-                        key={order._id || originalIndex} 
+                  {/* Display filtered orders */}                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map((order, index) => (                      <tr 
+                        key={order._id || index} 
                         className={`hover:bg-gray-50 transition-colors h-[46px] ${
-                          searchTerm && String(sequenceNumber) === searchTerm
+                          searchTerm && 
+                          (order.uniqueId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           order._id?.toLowerCase().includes(searchTerm.toLowerCase()))
                             ? 'bg-blue-50'
                             : ''
                         }`}
@@ -187,7 +201,7 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                         
                         <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
                           <div className="flex items-center">
-                            <span className="font-mono text-gray-900">#{sequenceNumber}</span>
+                            <span className="font-mono text-gray-900">{order.uniqueId || order._id?.slice(-4).padStart(4, '0') || 'N/A'}</span>
                           </div>
                         </td>
                         <td className="scope='col' px-2 py-2 whitespace-nowrap text-xs text-gray-500 w-[30%]">
@@ -208,7 +222,15 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </button>
-                            
+                            <button
+                              onClick={() => downloadSinglePDF(order)}
+                              className="p-1 rounded text-gray-600 hover:bg-gray-50 transition-colors"
+                              title="Download PDF"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
                             <button 
                               onClick={() => onDeleteOrder(order._id)} 
                               className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
@@ -219,8 +241,9 @@ const LocationCard = ({ location, orders, onViewOrder, onEditOrder, onAddOrder, 
                               </svg>
                             </button>
                           </div>                      
-                        </td>                      </tr>
-                    )})
+                        </td>                    
+                      </tr>
+                    ))
                   ) : (
                     <tr>
                       <td colSpan="4" className="px-2 py-4 text-center text-xs text-gray-500">
@@ -424,22 +447,13 @@ export default function Dashboard() {
       second: "2-digit"
     })
   })
-  const [locationSearchTerm, setLocationSearchTerm] = useState('');
-  
-  // Filter locations based on search term
-  const filteredLocations = locationSearchTerm.trim() 
-    ? Object.values(workOrdersByLocation).filter(entry => 
-        entry.location.name.toLowerCase().includes(locationSearchTerm.toLowerCase()) ||
-        entry.location.address.toLowerCase().includes(locationSearchTerm.toLowerCase())
-      )
-    : Object.values(workOrdersByLocation);
   // Define fetchData function outside useEffect to make it reusable
   const fetchData = async () => {
     setLoading(true)
     const token = localStorage.getItem("token")
     try {
       // Fetch users
-      const res = await fetch("http://localhost:5000/api/users", {
+      const res = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -562,11 +576,10 @@ export default function Dashboard() {
   }
 
   const handleEditOrder = (order) => {
-    // Do nothing or show a message if needed
-    // setCurrentOrder(order)
-    // setIsView(false)
-    // setIsEdit(true)
-    // setShowOrderModal(true)
+    setCurrentOrder(order)
+    setIsView(false)
+    setIsEdit(true)
+    setShowOrderModal(true)
   }
     const handleDeleteOrder = async (orderId) => {
     if (window.confirm("Are you sure you want to delete this work order? This action cannot be undone.")) {
@@ -594,10 +607,10 @@ export default function Dashboard() {
         ]);
         
         // Show success message
-        toast.success("Work order deleted successfully");
+        alert("Work order deleted successfully");
       } catch (error) {
         console.error("Error deleting work order:", error);
-        toast.error("Error deleting work order: " + (error.message || "Failed to delete work order"));
+        alert("Error deleting work order: " + (error.message || "Failed to delete work order"));
       }
     }
   }
@@ -783,10 +796,8 @@ export default function Dashboard() {
         }
       });
       
-      // Add images section if available      // First check for pictures in order.pictures (from backend storage)
-      // Then check for images in order.images (from frontend upload)      const orderImages = order.pictures || order.images || [];
-      
-      if (orderImages && orderImages.length > 0) {
+      // Add images section if available
+      if (order.pictures && order.pictures.length > 0) {
         // Add a new page for images if we're running out of space
         if (currentY > doc.internal.pageSize.getHeight() - 100) {
           doc.addPage();
@@ -801,61 +812,59 @@ export default function Dashboard() {
         // Track the promises for image loading
         const imagePromises = [];
         const imgInfos = [];
-          // Prepare image loading for all images        for (let i = 0; i < orderImages.length; i++) {
-          const imgPath = orderImages[i];
-          // Handle different image formats: URL string, base64 data, or relative path
-          const imageUrl = typeof imgPath === 'string' ? 
-            (imgPath.startsWith('data:') ? 
-              imgPath : // Already base64
-              imgPath.startsWith('http') ? 
-                imgPath : // Already full URL
-                `http://localhost:5002${imgPath.startsWith('/') ? '' : '/'}${imgPath}` // Relative path
-            ) : 
-            imgPath; // Some other format, hope for the best
+        
+        // Prepare image loading for all images
+        for (let i = 0; i < order.pictures.length; i++) {
+          const imgPath = order.pictures[i];
+          const imageUrl = imgPath.startsWith('http') 
+            ? imgPath 
+            : `${import.meta.env.VITE_ORDER_API_URL || 'http://localhost:5002'}${imgPath.startsWith('/') ? '' : '/'}${imgPath}`;
           
-          const promise = new Promise((resolve, reject) => {            
+          const promise = new Promise((resolve, reject) => {
             const img = new Image();
             img.crossOrigin = "Anonymous";
             img.onload = () => {
               const canvas = document.createElement('canvas');
               const ctx = canvas.getContext('2d');
+              
               // Set canvas dimensions proportional to image
               let imgWidth = img.width;
               let imgHeight = img.height;
-              const maxWidth = 170; // Increased from 170
-              const maxHeight = 120; // Increased from 120
+              const maxWidth = 170;
+              const maxHeight = 120;
+              
               // Resize image to fit within maximum dimensions while maintaining aspect ratio
               if (imgWidth > maxWidth || imgHeight > maxHeight) {
                 const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
                 imgWidth *= ratio;
                 imgHeight *= ratio;
               }
-              // Set high resolution canvas with 3x density for better quality
-              canvas.width = imgWidth * 3;
-              canvas.height = imgHeight * 3;
-              canvas.style.width = imgWidth + "px";
-              canvas.style.height = imgHeight + "px";
-              // Scale context for high-res rendering
-              ctx.scale(3, 3);
-              // Improve image quality with better rendering
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = "high";
-              // Draw image on canvas with better quality
+              
+              canvas.width = imgWidth;
+              canvas.height = imgHeight;
+              
+              // Draw image on canvas
               ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
-              // Get image data as base64 with highest quality PNG
-              const dataUrl = canvas.toDataURL('image/png', 1.0);
+              
+              // Get image data as base64
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              
+              // Store image info for adding to PDF
               imgInfos.push({
                 dataUrl,
                 width: imgWidth,
                 height: imgHeight,
                 originalPath: imgPath
               });
+              
               resolve();
             };
+            
             img.onerror = (err) => {
               console.error(`Error loading image: ${imageUrl}`, err);
               resolve(); // Resolve anyway to continue with other images
             };
+            
             img.src = imageUrl;
           });
           
@@ -866,7 +875,8 @@ export default function Dashboard() {
         await Promise.all(imagePromises);
         
         // Add images to PDF once loaded
-        if (imgInfos.length > 0) {          // Define dimensions
+        if (imgInfos.length > 0) {
+          // Define dimensions
           const marginLeft = 14;
           const marginRight = 14;
           const pageWidth = doc.internal.pageSize.getWidth();
@@ -876,40 +886,48 @@ export default function Dashboard() {
           let yPos = currentY;
           const spaceBetweenImages = 10;
           
-          // Add each image vertically, one per row
+          // Add each image
           for (let i = 0; i < imgInfos.length; i++) {
             const imgInfo = imgInfos[i];
-
-            // Check if we need to add a new page
+            
+            // Check if we need to add a new row
+            if (i > 0 && i % 2 === 0) {
+              yPos += imgInfo.height + spaceBetweenImages;
+              xPos = marginLeft;
+            } else if (i > 0) {
+              xPos = marginLeft + availableWidth / 2;
+            }
+            
+            // Check if we need a new page
             if (yPos + imgInfo.height > doc.internal.pageSize.getHeight() - 20) {
               doc.addPage();
               yPos = 20;
+              xPos = marginLeft;
             }
-
+            
             try {
               // Add the image
-              doc.addImage(imgInfo.dataUrl, 'PNG', xPos, yPos, imgInfo.width, imgInfo.height);
-
+              doc.addImage(imgInfo.dataUrl, 'JPEG', xPos, yPos, imgInfo.width, imgInfo.height);
+              
               // Add image number below the image
               doc.setFontSize(8);
               doc.setFont(undefined, 'normal');
               doc.text(`Image ${i+1}`, xPos + imgInfo.width/2, yPos + imgInfo.height + 5, { align: 'center' });
-
-              // Move yPos for next image (vertically)
-              yPos += imgInfo.height + spaceBetweenImages + 15;
             } catch (imgError) {
               console.error('Error adding image to PDF:', imgError);
             }
           }
           
           // Update Y position for next content
-          currentY = yPos + 10;
+          currentY = yPos + Math.max(...imgInfos.slice(-Math.min(imgInfos.length, 2)).map(img => img.height)) + spaceBetweenImages + 10;
         } else {
           doc.setFontSize(10);
           doc.setFont(undefined, 'italic');
           doc.text("No images available", marginLeft, currentY + 10);
           currentY += 20;
         }
+      }
+
       // Add signature section
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
@@ -936,7 +954,7 @@ export default function Dashboard() {
       doc.save(`confined-space-assessment-${order.confinedSpaceNameOrId || 'report'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Error generating PDF. Please try again.');
+      alert('Error generating PDF. Please try again.');
     }
   };
     const handleOrderSubmit = async (formData) => {
@@ -949,7 +967,7 @@ export default function Dashboard() {
       }
       
       // Show success message
-      toast.success(`Work order ${isEdit ? 'updated' : 'added'} successfully`);
+      alert(`Work order ${isEdit ? 'updated' : 'added'} successfully`);
       
       // Refresh data to update the UI
       await fetchData();
@@ -958,65 +976,9 @@ export default function Dashboard() {
       setShowOrderModal(false);
     } catch (error) {
       console.error("Error saving work order:", error);
-      toast.error("Error saving work order: " + error.message);
+      alert("Error saving work order: " + error.message);
     }
   }
-
-  // Download filtered work orders as Excel
-  const handleDownloadAllExcel = () => {
-    // Flatten only filtered orders into a single array
-    const allOrders = [];
-    filteredLocations.forEach(entry => {
-      entry.orders.forEach(order => {
-        // Flatten nested fields as needed for Excel
-        allOrders.push({
-          "Order ID": order._id,
-          "Unique ID": order.uniqueId,
-          "Date of Survey": order.dateOfSurvey,
-          "Surveyors": Array.isArray(order.surveyors) ? order.surveyors.join(", ") : order.surveyors,
-          "Confined Space Name/ID": order.confinedSpaceNameOrId,
-          "Building": order.building,
-          "Location Description": order.locationDescription,
-          "Confined Space Description": order.confinedSpaceDescription,
-          "Confined Space": order.confinedSpace ? "Yes" : "No",
-          "Permit Required": order.permitRequired ? "Yes" : "No",
-          "Entry Requirements": order.entryRequirements,
-          "Atmospheric Hazard": order.atmosphericHazard ? "Yes" : "No",
-          "Atmospheric Hazard Description": order.atmosphericHazardDescription,
-          "Engulfment Hazard": order.engulfmentHazard ? "Yes" : "No",
-          "Engulfment Hazard Description": order.engulfmentHazardDescription,
-          "Configuration Hazard": order.configurationHazard ? "Yes" : "No",
-          "Configuration Hazard Description": order.configurationHazardDescription,
-          "Other Recognized Hazards": order.otherRecognizedHazards ? "Yes" : "No",
-          "Other Hazards Description": order.otherHazardsDescription,
-          "PPE Required": order.ppeRequired ? "Yes" : "No",
-          "PPE List": order.ppeList,
-          "Forced Air Ventilation Sufficient": order.forcedAirVentilationSufficient ? "Yes" : "No",
-          "Dedicated Continuous Air Monitor": order.dedicatedContinuousAirMonitor ? "Yes" : "No",
-          "Warning Sign Posted": order.warningSignPosted ? "Yes" : "No",
-          "Other People Working Near Space": order.otherPeopleWorkingNearSpace ? "Yes" : "No",
-          "Can Others See Into Space": order.canOthersSeeIntoSpace ? "Yes" : "No",
-          "Contractors Enter Space": order.contractorsEnterSpace ? "Yes" : "No",
-          "Number Of Entry Points": order.numberOfEntryPoints,
-          "Notes": order.notes,
-          "Pictures": Array.isArray(order.pictures) ? order.pictures.join(", ") : order.pictures,
-        });
-      });
-    });
-
-    if (allOrders.length === 0) {
-      alert("No work orders to export.");
-      return;
-    }
-
-    // Create worksheet and workbook
-    const ws = XLSX.utils.json_to_sheet(allOrders);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "WorkOrders");
-
-    // Download as Excel file
-    XLSX.writeFile(wb, "confined-space-work-orders.xlsx");
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -1071,7 +1033,8 @@ export default function Dashboard() {
             icon={<LocationIcon className="text-white w-6 h-6" />}
             trend="With work orders"
           />
-        </div>        {/* Work Orders by Location Section */}        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
+        </div>        {/* Work Orders by Location Section */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 rounded-t-xl">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
               <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
@@ -1079,17 +1042,6 @@ export default function Dashboard() {
                 <span>Work Orders by Location</span>
               </h2>
               <div className="flex items-center space-x-3">
-                {/* Download All Button */}
-                <button
-                  onClick={handleDownloadAllExcel}
-                  className="text-sm font-medium text-gray-700 hover:gray-green-900 flex items-center bg-gray-50 px-3 py-2 rounded-md border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow transition-all"
-                  title="Download all work orders as Excel"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Download Report
-                </button>
                 <a href="/admin/workorders" className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center bg-white px-3 py-2 rounded-md border border-blue-100 hover:border-blue-200 shadow-sm hover:shadow transition-all">
                   View All Orders
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1100,55 +1052,15 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="p-6 lg:p-8">
-            {/* Search bar for locations */}
-            <div className="mb-4">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search locations by name or address..."
-                  value={locationSearchTerm}
-                  onChange={(e) => setLocationSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none"
-                />
-                {locationSearchTerm && (
-                  <button 
-                    onClick={() => setLocationSearchTerm('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {locationSearchTerm && filteredLocations.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                <LocationIcon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-lg font-medium">No locations found</p>
-                <p className="text-gray-400 text-sm max-w-md mx-auto mt-2">
-                  No locations match your search term "{locationSearchTerm}"
-                </p>
-              </div>
-            ) : (
-              <WorkOrderLocationGrid 
-                workOrdersByLocation={Object.fromEntries(
-                  filteredLocations.map(entry => [entry.location._id, entry])
-                )}
-                loading={orderLoading || locationLoading}
-                onViewOrder={handleViewOrder}
-                onEditOrder={undefined} // Disable edit for admin
-                onAddOrder={handleAddWorkOrder}
-                onDeleteOrder={handleDeleteOrder}
-                downloadSinglePDF={downloadSinglePDF}
-              />
-            )}
+            <WorkOrderLocationGrid 
+              workOrdersByLocation={workOrdersByLocation} 
+              loading={orderLoading || locationLoading}
+              onViewOrder={handleViewOrder}
+              onEditOrder={handleEditOrder} 
+              onAddOrder={handleAddWorkOrder}
+              onDeleteOrder={handleDeleteOrder}
+              downloadSinglePDF={downloadSinglePDF}
+            />
           </div>
         </div>
           {/* Work Order Modal would be imported from your components */}

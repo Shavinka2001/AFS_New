@@ -8,9 +8,10 @@ import { toast } from 'react-toastify';
  * Redirects to user dashboard if authenticated but not admin
  * Redirects to login if not authenticated
  */
-const AdminRoute = ({ children }) => {  const { isAuthenticated, user, isLoading, isAdmin } = useAuth();
-  
-  // If still checking auth status, show a loading indicator
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, user, isLoading, isAdmin } = useAuth();
+
+  // Wait for loading to finish before checking privileges
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen w-screen">

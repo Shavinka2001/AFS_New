@@ -126,8 +126,18 @@ const AssignedLocations = ({ isAdmin = false }) => {
               }`}
               onClick={() => handleViewDetails(location)}
             >
-              <h3 className="font-medium text-lg mb-2">{location.name}</h3>
-              <p className="text-gray-600 text-sm mb-2">{location.address}</p>
+              <h3 className="font-medium text-lg mb-2">
+                {/* Show saved name if deleted */}
+                {location.isDeleted
+                  ? (location.confinedSpaceNameOrId || location.name)
+                  : location.name}
+              </h3>
+              <p className="text-gray-600 text-sm mb-2">
+                {/* Show saved address/description if deleted */}
+                {location.isDeleted
+                  ? (location.locationDescription || location.address)
+                  : location.address}
+              </p>
               <div className="flex justify-between items-center mt-2">
                 <span className={`px-2 py-1 text-xs rounded-full ${
                   location.isActive 

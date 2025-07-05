@@ -16,7 +16,7 @@ app.use(express.json());
 //host.docker.internal
 // app.use("/api/users", applyRateLimiter, proxy("host.docker.internal:5001"));
 app.use("/api/auth", applyRateLimiter, proxy("http://localhost:5000"));
-app.use("/api/users", applyRateLimiter, proxy("http://localhost:5000/api/auth"));
+app.use("/api/users", applyRateLimiter, proxy("http://localhost:5000"));
 app.use(
   "/api/order",
   applyRateLimiter,

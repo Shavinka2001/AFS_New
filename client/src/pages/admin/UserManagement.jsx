@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 
 // Configure axios defaults
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api/auth',
+  baseURL: import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -47,7 +47,7 @@ const UserManagement = () => {
         }
         
         // Admin check is now handled by AdminRoute component
-        const response = await api.get("/", {
+        const response = await api.get("/api/users", {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -71,6 +71,12 @@ const UserManagement = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    // Email validation: must end with @agilefacilities.com
+    if (!newUser.email.toLowerCase().endsWith('@agilefacilities.com')) {
+      setError("Email must end with @agilefacilities.com");
+      return;
+    }
     
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -85,7 +91,7 @@ const UserManagement = () => {
       };
 
       const response = await api.post(
-        "/",
+        "/api/users",
         userData,
         {
           headers: {
@@ -116,10 +122,19 @@ const UserManagement = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setNewUser(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    if (name === "email") {
+      // Only allow editing before the @ for both add and edit modals
+      const username = value.split("@")[0];
+      setNewUser(prev => ({
+        ...prev,
+        email: username + "@agilefacilities.com"
+      }));
+    } else {
+      setNewUser(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleEditUser = (userId) => {
@@ -127,9 +142,9 @@ const UserManagement = () => {
     if (user) {
       setSelectedUser(user);
       setNewUser({
-        firstName: user.firstname,
-        lastName: user.lastname,
-        email: user.email,
+        firstName: user.firstname || user.firstName || "",
+        lastName: user.lastname || user.lastName || "",
+        email: user.email || "",
         password: "", // Don't show password
         userType: user.userType,
         isActive: user.isActive,
@@ -150,7 +165,7 @@ const UserManagement = () => {
     setIsDeleting(true);
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      await api.delete(`/${userToDelete}`, {
+      await api.delete(`/api/users/${userToDelete}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -181,8 +196,8 @@ const UserManagement = () => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const userData = {
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
+        firstname: newUser.firstName,
+        lastname: newUser.lastName,
         email: newUser.email,
         userType: newUser.userType,
         isActive: newUser.isActive,
@@ -191,11 +206,10 @@ const UserManagement = () => {
 
       if (newUser.password) {
         userData.password = newUser.password;
-        userData.confirmPassword = newUser.password; // <-- Add this line
       }
 
       const response = await api.put(
-        `/${selectedUser._id}`,
+        `/api/users/${selectedUser._id}`,
         userData,
         {
           headers: {
@@ -234,7 +248,7 @@ const UserManagement = () => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await api.patch(
-        `/approve/${userId}`,
+        `/api/users/approve/${userId}`,
         {},
         {
           headers: {
@@ -541,14 +555,22 @@ const UserManagement = () => {
                     </svg>
                   </div>
                   <input
-                    type="email"
+                    type="text"
                     name="email"
-                    value={newUser.email}
+                    value={newUser.email.replace("@agilefacilities.com", "")}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
-                    placeholder="john.doe@example.com"
+                    className={`w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border ${!newUser.email || newUser.email.toLowerCase().endsWith('@agilefacilities.com') ? 'border-gray-300' : 'border-red-500'} focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all pr-44`}
+                    placeholder="john.doe"
+                    autoComplete="off"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 select-none pointer-events-none">
+                    @agilefacilities.com
+                  </span>
+                  {/* Email validation message */}
+                  {newUser.email && !newUser.email.toLowerCase().endsWith('@agilefacilities.com') && (
+                    <p className="mt-1 text-xs text-red-600">Email must end with @agilefacilities.com</p>
+                  )}
                 </div>
               </div>
 
@@ -730,13 +752,18 @@ const UserManagement = () => {
                     </svg>
                   </div>
                   <input
-                    type="email"
+                    type="text"
                     name="email"
-                    value={newUser.email}
+                    value={newUser.email.replace("@agilefacilities.com", "")}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 sm:pl-12 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all pr-44"
+                    placeholder="john.doe"
+                    autoComplete="off"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 select-none pointer-events-none">
+                    @agilefacilities.com
+                  </span>
                 </div>
               </div>
 

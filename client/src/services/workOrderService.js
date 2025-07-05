@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/order';
+const API_URL = import.meta.env.VITE_ORDER_API_URL || '/api/order';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -21,19 +21,11 @@ export const createWorkOrder = async (orderData) => {
   try {
     console.log('Creating work order with data:', orderData); // Debug log
     
-    // Generate a unique ID with pattern 0001, 0002, etc. if not provided
-    if (!orderData.uniqueId) {
-      try {
-        // Get current orders to determine next ID
-        const currentOrders = await getWorkOrders();
-        const nextNumber = (currentOrders?.length || 0) + 1;
-        // Format as 4-digit number with leading zeros
-        orderData.uniqueId = String(nextNumber).padStart(4, '0');
-      } catch (err) {
-        console.error('Error generating unique ID:', err);
-        // Fallback to timestamp-based ID
-        orderData.uniqueId = new Date().getTime().toString().slice(-4).padStart(4, '0');
-      }
+    // Remove uniqueId generation from frontend
+    if (orderData.uniqueId) {
+      // If user manually entered a uniqueId, keep it (backend will validate)
+    } else {
+      delete orderData.uniqueId; // Ensure not set, backend will generate
     }
     
     // Create a FormData object for file uploads
@@ -212,9 +204,16 @@ export const searchWorkOrders = async (searchParams) => {
       }
     });
     
+    // Ensure dateOfSurvey is sent as YYYY-MM-DD if present
+    const params = { ...searchParams };
+    if (params.dateOfSurvey) {
+      // Only keep the date part (not time)
+      params.dateOfSurvey = params.dateOfSurvey.slice(0, 10);
+    }
+
     const response = await api.get('/search', {
-      params: cleanParams,
-      headers: authHeader(),
+      params,
+      headers: authHeader()
     });
     return response.data;
   } catch (error) {

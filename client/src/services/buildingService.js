@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/locations';
+const API_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5000';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,7 +20,7 @@ const authHeader = () => {
 // Get buildings for a location
 export const getBuildingsForLocation = async (locationId) => {
   try {
-    const response = await api.get(`/${locationId}/buildings`, {
+    const response = await api.get(`/api/locations/${locationId}/buildings`, {
       headers: authHeader(),
     });
     return response.data;
@@ -37,7 +37,7 @@ export const getBuildingsForLocation = async (locationId) => {
 // Add building to location
 export const addBuildingToLocation = async (locationId, buildingData) => {
   try {
-    const response = await api.post(`/${locationId}/buildings`, buildingData, {
+    const response = await api.post(`/api/locations/${locationId}/buildings`, buildingData, {
       headers: authHeader(),
     });
     return response.data;
@@ -54,7 +54,7 @@ export const addBuildingToLocation = async (locationId, buildingData) => {
 // Update building in location
 export const updateBuildingInLocation = async (locationId, buildingId, buildingData) => {
   try {
-    const response = await api.put(`/${locationId}/buildings/${buildingId}`, buildingData, {
+    const response = await api.put(`/api/locations/${locationId}/buildings/${buildingId}`, buildingData, {
       headers: authHeader(),
     });
     return response.data;
@@ -71,7 +71,7 @@ export const updateBuildingInLocation = async (locationId, buildingId, buildingD
 // Delete building from location
 export const deleteBuildingFromLocation = async (locationId, buildingId) => {
   try {
-    const response = await api.delete(`/${locationId}/buildings/${buildingId}`, {
+    const response = await api.delete(`/api/locations/${locationId}/buildings/${buildingId}`, {
       headers: authHeader(),
     });
     return response.data;

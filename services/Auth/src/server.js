@@ -55,6 +55,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use('/api/auth', userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/locations', locationRoutes);
 
 // Health check route

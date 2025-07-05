@@ -31,7 +31,10 @@ const LocationMapView = ({ location, height = '300px' }) => {
   };
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-lg border border-gray-200" style={{ height }}>
+    <div
+      className="rounded-2xl overflow-hidden shadow-lg border border-gray-200"
+      style={{ height, minHeight: height, width: '100%' }}
+    >
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
         center={position}
@@ -52,8 +55,18 @@ const LocationMapView = ({ location, height = '300px' }) => {
               onCloseClick={() => setShowInfoWindow(false)}
             >
               <div className="p-2 max-w-xs">
-                <h3 className="font-medium text-gray-900">{location.name}</h3>
-                <p className="text-sm text-gray-600">{location.address || 'No address provided'}</p>
+                <h3 className="font-medium text-gray-900">
+                  {/* Show saved name if location is deleted */}
+                  {location.isDeleted
+                    ? (location.confinedSpaceNameOrId || location.name)
+                    : location.name}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {/* Show saved address/description if location is deleted */}
+                  {location.isDeleted
+                    ? (location.locationDescription || location.address || 'No address provided')
+                    : (location.address || 'No address provided')}
+                </p>
                 {location.description && (
                   <p className="text-sm mt-1">{location.description}</p>
                 )}

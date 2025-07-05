@@ -14,15 +14,16 @@ import {
 function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();    const [user, setUser] = useState({ firstname: "", lastname: "" });
-    const { user: authUser, isAuthenticated, logout: authLogout, isAdmin } = useAuth();
-      
+    const navigate = useNavigate();
+    const [user, setUser] = useState({ firstname: "", lastname: "" });
+    const { user: authUser, isAuthenticated, logout: authLogout, isAdmin, isLoading } = useAuth();
+
     useEffect(() => {
-        // Only set user data once on initial render or when authUser changes
+        // Wait for loading to finish before checking privileges
+        if (isLoading) return;
+
         if (authUser) {
-            // Additional check to ensure user is an admin using the helper
             if (!isAdmin) {
-                // Redirect non-admin users to the user dashboard
                 navigate('/user/dashboard', { replace: true });
                 return;
             }
@@ -32,7 +33,6 @@ function AdminLayout() {
             if (userData) {
                 try {
                     const parsedUser = JSON.parse(userData);
-                    // Double-check for admin privilege
                     if (!(parsedUser.isAdmin || parsedUser.userType === 'admin')) {
                         navigate('/user/dashboard', { replace: true });
                         return;
@@ -40,15 +40,22 @@ function AdminLayout() {
                     setUser(parsedUser);
                 } catch (error) {
                     console.error("Error parsing user data:", error);
-                    // Redirect to login on error
                     navigate('/login', { replace: true });
                 }
             } else {
-                // No user data, redirect to login
                 navigate('/login', { replace: true });
             }
         }
-    }, [authUser, isAdmin, navigate]);
+    }, [authUser, isAdmin, isLoading, navigate]);
+
+    // Show loading spinner while loading
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen w-screen">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gray-900"></div>
+            </div>
+        );
+    }
 
     const stats = {
         totalWorkOrders: 150,
