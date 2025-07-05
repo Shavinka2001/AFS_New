@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createWorkOrder, updateWorkOrder } from "../../../services/workOrderService";
+import { getAssignedLocations } from "../../../services/locationService";
 import { toast } from "react-toastify";
 
 const boolOptions = [
@@ -58,14 +59,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     const fetchLocations = async () => {
       try {
         setIsLoadingLocations(true);
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/locations/assigned/me`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken")}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!response.ok) throw new Error("Failed to fetch assigned locations");
-        const data = await response.json();
+        const data = await getAssignedLocations();
         let locationData = [];
         if (data.success && data.locations) {
           locationData = data.locations;
@@ -134,7 +128,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         // Map to full URL if needed
         .map(img =>
           typeof img === "string" && img.startsWith("/uploads/")
-            ? `${import.meta.env.VITE_FILE_SERVER_URL || "http://localhost:5002"}${img}`
+            ? `${import.meta.env.VITE_ORDER_API_URL || "http://localhost:5002"}${img}`
             : img
         );
       setExistingImages(imgs);
@@ -249,14 +243,31 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     toast.info('Image removed');
   };
 
-  // Camera functions
+    // Camera functions
   const startCamera = async () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast.error('Camera access is not supported in this browser or context.');
-      console.error('navigator.mediaDevices.getUserMedia is not available.');
+    // Check if we're on HTTPS or localhost
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      toast.error('Camera access requires HTTPS or localhost. Please use HTTPS or run on localhost.');
+      console.error('Camera access requires HTTPS or localhost');
       return;
     }
+
+    // Check if mediaDevices is supported
+    if (!navigator.mediaDevices) {
+      toast.error('Camera access is not supported in this browser. Please use a modern browser.');
+      console.error('navigator.mediaDevices is not supported');
+      return;
+    }
+
+    // Check if getUserMedia is supported
+    if (!navigator.mediaDevices.getUserMedia) {
+      toast.error('Camera access is not supported in this browser. Please use a modern browser.');
+      console.error('navigator.mediaDevices.getUserMedia is not supported');
+      return;
+    }
+
     try {
+      // Request camera permissions
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment', // 'environment' for back camera (if available)
@@ -265,17 +276,33 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
         },
         audio: false
       });
+      
       setStream(mediaStream);
+      
       // Once camera is opened
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
+        await videoRef.current.play();
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
-      toast.error('Could not access camera. Please check permissions and try again.');
-    }
-  };
+      
+      // Provide specific error messages based on the error type
+      if (error.name === 'NotAllowedError') {
+        toast.error('Camera access was denied. Please allow camera permissions and try again.');
+      } else if (error.name === 'NotFoundError') {
+        toast.error('No camera found. Please ensure you have a camera connected.');
+      } else if (error.name === 'NotReadableError') {
+        toast.error('Camera is already in use by another application. Please close other camera applications and try again.');
+      } else if (error.name === 'OverconstrainedError') {
+        toast.error('Camera does not meet the required specifications. Please try with a different camera.');
+      } else if (error.name === 'TypeError') {
+        toast.error('Camera access is not supported in this context. Please use HTTPS or localhost.');
+      } else {
+        toast.error('Could not access camera. Please check permissions and try again.');
+      }
+    }
+  };
 
   const stopCamera = () => {
     if (stream) {
@@ -437,7 +464,14 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   <div className="flex-1">
                     <button
                       type="button"
-                      onClick={() => setShowCamera(true)}
+                      onClick={() => {
+                        // Check if camera is supported before opening
+                        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                          setShowCamera(true);
+                        } else {
+                          toast.error('Camera is not supported in this browser. Please use the file upload option instead.');
+                        }
+                      }}
                       className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -448,7 +482,11 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                         <p className="mb-2 text-sm text-gray-700">
                           <span className="font-semibold">Take a photo</span>
                         </p>
-                        <p className="text-xs text-gray-500">Use your camera</p>
+                        <p className="text-xs text-gray-500">
+                          {navigator.mediaDevices && navigator.mediaDevices.getUserMedia 
+                            ? "Use your camera" 
+                            : "Camera not supported"}
+                        </p>
                       </div>
                     </button>
                   </div>
@@ -476,8 +514,10 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                         ></video>
                         <canvas ref={canvasRef} className="hidden"></canvas>
                         {!stream && (
-                          <div className="flex items-center justify-center h-72 bg-gray-900">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+                          <div className="flex flex-col items-center justify-center h-72 bg-gray-900 text-white">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-4"></div>
+                            <p className="text-sm">Initializing camera...</p>
+                            <p className="text-xs text-gray-400 mt-2">Please allow camera permissions if prompted</p>
                           </div>
                         )}
                       </div>
@@ -485,7 +525,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                         <button
                           type="button"
                           onClick={captureImage}
-                          className="px-6 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl shadow hover:from-gray-800 hover:to-gray-700 transition-all"
+                          className="px-6 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl shadow hover:from-gray-800 hover:to-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={!stream}
                         >
                           <div className="flex items-center">
@@ -493,10 +533,23 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                               <circle cx="12" cy="13" r="3" />
                             </svg>
-                            Capture Photo
+                            {stream ? "Capture Photo" : "Camera Loading..."}
                           </div>
                         </button>
                       </div>
+                      {!stream && (
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Camera Access Tips:</strong>
+                          </p>
+                          <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                            <li>• Make sure you're using HTTPS or localhost</li>
+                            <li>• Allow camera permissions when prompted</li>
+                            <li>• Ensure no other apps are using the camera</li>
+                            <li>• Try refreshing the page if issues persist</li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -567,17 +620,24 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   required 
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                 />
-              </div>              <div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Technician *</label>
                 <input 
                   type="text" 
                   name="surveyors" 
-                  value={formData.technician || `${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').firstname} ${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').lastname}`} 
+                  value={
+                    // Show saved surveyors (comma separated) if editing, else show current user
+                    isEdit && Array.isArray(formData.surveyors) && formData.surveyors.length > 0
+                      ? formData.surveyors.join(", ")
+                      : `${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').firstname} ${JSON.parse(localStorage.getItem("User") || '{"firstname":"", "lastname":""}').lastname}`
+                  }
                   readOnly
                   required 
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-transparent transition-all cursor-not-allowed" 
                 />
-              </div>              <div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Space Name/ID *</label>
                 {isLoadingLocations ? (
                   <div className="flex items-center">
@@ -618,7 +678,8 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all" 
                   />
                 )}
-              </div>              <div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Building *</label>
                 {assignedLocations.length > 0 && selectedLocation ? (
                   <>
