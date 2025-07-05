@@ -263,7 +263,14 @@ const verifyAuth = async () => {
 // Get all technicians (users with 'user' role)
 const getTechnicians = async () => {
     try {
-        const response = await api.get('/');
+        // Use the Auth service URL for user management
+        const authURL = import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5001';
+        const response = await axios.get(`${authURL}/api/users`, {
+            headers: {
+                'Authorization': `Bearer ${getAccessToken()}`,
+                'Content-Type': 'application/json'
+            }
+        });
         // Filter users with 'user' role only
         return response.data.filter(user => user.userType === 'user' && user.isActive);
     } catch (error) {
@@ -274,13 +281,11 @@ const getTechnicians = async () => {
 // Get technician by ID
 const getTechnicianById = async (id) => {
     try {
-        // Add a token to ensure the request is authenticated
-        let token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        token = token?.replace(/^"|"$/g, '');
-        
-        const response = await axios.get(`${API_URL}/${id}`, {
+        // Use the Auth service URL for user management
+        const authURL = import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5001';
+        const response = await axios.get(`${authURL}/api/users/${id}`, {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${getAccessToken()}`,
                 'Content-Type': 'application/json'
             }
         });

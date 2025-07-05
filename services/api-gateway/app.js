@@ -15,8 +15,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 //host.docker.internal
 // app.use("/api/users", applyRateLimiter, proxy("host.docker.internal:5001"));
-app.use("/api/auth", applyRateLimiter, proxy("http://localhost:5000"));
-app.use("/api/users", applyRateLimiter, proxy("http://localhost:5000"));
+app.use("/api/auth", applyRateLimiter, proxy("http://localhost:5001"));
+app.use("/api/users", applyRateLimiter, proxy("http://localhost:5001"));
 app.use(
   "/api/order",
   applyRateLimiter,
@@ -25,7 +25,7 @@ app.use(
 app.use(
   "/api/locations",
   applyRateLimiter,
-  proxy("http://localhost:5000")
+  proxy("http://localhost:5001")
 );
 
 //Exporting app to be used by the server.js

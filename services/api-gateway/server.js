@@ -9,7 +9,7 @@ const app = require("./app");
 require("dotenv").config();
 
 console.log("Server Js executing... Initiating HTTP server");
-const port = process.env.PORT;
+const port = process.env.PORT || 5000; // Default port 5000
 
 //Creates HTTP server
 const server = http.createServer(app);

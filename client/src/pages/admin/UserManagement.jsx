@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 
 // Configure axios defaults
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5000',
+  baseURL: import.meta.env.VITE_API_GATEWAY_URL || 'http://4.236.138.4:5001',
   headers: {
     'Content-Type': 'application/json',
   },

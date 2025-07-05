@@ -244,7 +244,9 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
   };
 
     // Camera functions
-  const startCamera = async () => {
+  const [cameraMode, setCameraMode] = useState('environment'); // 'environment' for back, 'user' for front
+  
+  const startCamera = async (mode = 'environment') => {
     // Check if we're on HTTPS or localhost
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
       toast.error('Camera access requires HTTPS or localhost. Please use HTTPS or run on localhost.');
@@ -267,17 +269,28 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
     }
 
     try {
-      // Request camera permissions
+      // Stop existing stream if any
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        setStream(null);
+      }
+
+      // Request camera permissions with better iPad support
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'environment', // 'environment' for back camera (if available)
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: mode, // 'environment' for back camera, 'user' for front camera
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          // iPad specific constraints
+          aspectRatio: { ideal: 16/9 },
+          frameRate: { ideal: 30, min: 15 }
         },
         audio: false
       });
       
       setStream(mediaStream);
+      setCameraMode(mode);
       
       // Once camera is opened
       if (videoRef.current) {
@@ -301,6 +314,36 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
       } else {
         toast.error('Could not access camera. Please check permissions and try again.');
       }
+    }
+  };
+
+  const switchCamera = async () => {
+    const newMode = cameraMode === 'environment' ? 'user' : 'environment';
+    await startCamera(newMode);
+  };
+
+  // Check camera availability
+  const checkCameraAvailability = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return { available: false, message: 'Camera enumeration not supported' };
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      if (videoDevices.length === 0) {
+        return { available: false, message: 'No camera devices found' };
+      }
+
+      return { 
+        available: true, 
+        count: videoDevices.length,
+        devices: videoDevices.map(device => device.label || `Camera ${device.deviceId.slice(0, 8)}`)
+      };
+    } catch (error) {
+      console.error('Error checking camera availability:', error);
+      return { available: false, message: 'Error checking camera availability' };
     }
   };
 
@@ -350,7 +393,8 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
   // Start camera when the camera modal opens
   useEffect(() => {
     if (showCamera && !stream) {
-      startCamera();
+      // Start with back camera by default
+      startCamera('environment');
     }
   }, [showCamera]);
 
@@ -464,10 +508,16 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                   <div className="flex-1">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         // Check if camera is supported before opening
                         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                          setShowCamera(true);
+                          // Check camera availability
+                          const cameraInfo = await checkCameraAvailability();
+                          if (cameraInfo.available) {
+                            setShowCamera(true);
+                          } else {
+                            toast.error(`Camera not available: ${cameraInfo.message}. Please use the file upload option instead.`);
+                          }
                         } else {
                           toast.error('Camera is not supported in this browser. Please use the file upload option instead.');
                         }
@@ -484,7 +534,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                         </p>
                         <p className="text-xs text-gray-500">
                           {navigator.mediaDevices && navigator.mediaDevices.getUserMedia 
-                            ? "Use your camera" 
+                            ? "Use your camera (iPad supported)" 
                             : "Camera not supported"}
                         </p>
                       </div>
@@ -497,7 +547,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                       <button
                         type="button"
                         onClick={stopCamera}
-                        className="absolute top-2 right-2 text-gray-700 hover:text-gray-900"
+                        className="absolute top-2 right-2 text-gray-700 hover:text-gray-900 z-10"
                       >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -510,6 +560,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                           className="w-full h-full object-cover"
                           autoPlay
                           playsInline
+                          muted
                           style={{ display: stream ? 'block' : 'none' }}
                         ></video>
                         <canvas ref={canvasRef} className="hidden"></canvas>
@@ -521,15 +572,30 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-center mt-4">
+                      
+                      {/* Camera Controls */}
+                      <div className="flex justify-center items-center gap-4 mt-4">
+                        {/* Switch Camera Button */}
+                        <button
+                          type="button"
+                          onClick={switchCamera}
+                          className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full transition-colors"
+                          title={`Switch to ${cameraMode === 'environment' ? 'Front' : 'Back'} Camera`}
+                        >
+                          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                        
+                        {/* Capture Button */}
                         <button
                           type="button"
                           onClick={captureImage}
-                          className="px-6 py-2 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl shadow hover:from-gray-800 hover:to-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-8 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl shadow hover:from-gray-800 hover:to-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={!stream}
                         >
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                               <circle cx="12" cy="13" r="3" />
                             </svg>
@@ -537,6 +603,21 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                           </div>
                         </button>
                       </div>
+                      
+                      {/* Camera Status */}
+                      <div className="mt-4 text-center">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          cameraMode === 'environment' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          </svg>
+                          {cameraMode === 'environment' ? 'Back Camera' : 'Front Camera'}
+                        </span>
+                      </div>
+                      
                       {!stream && (
                         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="text-sm text-blue-800">
@@ -546,6 +627,7 @@ const WorkOrderModal = ({ show, onClose, onSubmit, order, onChange, isEdit }) =>
                             <li>• Make sure you're using HTTPS or localhost</li>
                             <li>• Allow camera permissions when prompted</li>
                             <li>• Ensure no other apps are using the camera</li>
+                            <li>• On iPad: Try both front and back cameras</li>
                             <li>• Try refreshing the page if issues persist</li>
                           </ul>
                         </div>
